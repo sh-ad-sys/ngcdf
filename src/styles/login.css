@@ -1,0 +1,250 @@
+
+
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap");
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Poppins", sans-serif;
+}
+
+/* ----------- MAIN LAYOUT ----------- */
+.login-page {
+  position: relative;
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  overflow: auto; /* ✅ allows scrolling when form grows */
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+/* Optional overlay for better text contrast */
+.login-page::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 47, 95, 0.45);
+  z-index: 1;
+}
+
+/* ----------- RIGHT FORM SECTION ----------- */
+.login-right {
+  position: relative;
+  z-index: 2;
+  width: 420px;
+  margin: 3rem 5%;
+  background: rgba(255, 255, 255, 0.98);
+  border-radius: 1.25rem;
+  padding: 2.5rem 2rem;
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.15);
+  animation: slideIn 0.8s ease;
+  overflow-y: auto; /* ✅ allows internal scroll for the form */
+  max-height: 90vh;
+}
+/* ----------- LOGO ----------- */
+.login-logo {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.login-logo img {
+  width: 110px; /* adjust size as needed */
+  height: auto;
+  object-fit: contain;
+  border-radius: 50%; /* optional: circular logo */
+  transition: transform 0.3s ease;
+}
+
+.login-logo img:hover {
+  transform: scale(1.05);
+}
+
+/* Responsive adjustments */
+@media (max-width: 900px) {
+  .auth-logo img {
+    width: 90px;
+  }
+}
+
+@media (max-width: 480px) {
+  .login-logo img {
+    width: 70px;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(60px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* ----------- TITLES ----------- */
+.login-title {
+  text-align: center;
+  font-size: 1.8rem;
+  color: #0047b3;
+  font-weight: 700;
+}
+
+.login-subtitle {
+  text-align: center;
+  color: #6b7280;
+  font-size: 0.95rem;
+  margin-top: 0.3rem;
+  margin-bottom: 1.5rem;
+}
+
+/* ----------- FORM ----------- */
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.form-group {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 0.3rem;
+  font-size: 0.95rem;
+}
+
+/* Red star for required fields */
+.form-group label::after {
+  content: "*";
+  color: #e11d48;
+  margin-left: 4px;
+}
+
+.form-group input,
+.form-group select {
+  padding: 0.8rem 1rem;
+  border-radius: 0.75rem;
+  border: 1.6px solid #cbd5e1;
+  font-size: 0.95rem;
+  outline: none;
+  transition: all 0.2s ease;
+  background: #fdfdfd;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+/* Password Toggle */
+.password-group {
+  position: relative;
+}
+
+.toggle-password {
+  position: absolute;
+  right: 12px;
+  top: 38px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #9ca3af;
+  transition: color 0.2s ease;
+}
+
+.toggle-password:hover {
+  color: #374151;
+}
+
+/* ----------- BUTTON ----------- */
+.login-btn {
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 0.75rem;
+  padding: 0.9rem;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.login-btn:hover {
+  background: #1d4ed8;
+  transform: translateY(-1px);
+}
+
+.login-btn:disabled {
+  background: #93c5fd;
+  cursor: not-allowed;
+}
+
+/* ----------- FOOTER ----------- */
+.login-footer {
+  text-align: center;
+  margin-top: 1.5rem;
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+.login-link {
+  color: #2563eb;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.login-link:hover {
+  color: #1d4ed8;
+}
+
+/* ----------- SCROLLBAR STYLING ----------- */
+.register-right::-webkit-scrollbar {
+  width: 8px;
+}
+
+.register-right::-webkit-scrollbar-thumb {
+  background-color: rgba(100, 116, 139, 0.4);
+  border-radius: 4px;
+}
+
+.register-right::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(100, 116, 139, 0.7);
+}
+
+/* ----------- RESPONSIVE ----------- */
+@media (max-width: 900px) {
+  .register-page {
+    justify-content: center;
+    align-items: flex-start;
+    padding: 2rem 0;
+    background-position: center;
+  }
+
+  .register-right {
+    width: 92%;
+    margin: 1rem auto;
+    max-height: none; /* full scroll on mobile */
+    overflow-y: visible;
+    padding: 2rem 1.5rem;
+  }
+}

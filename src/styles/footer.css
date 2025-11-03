@@ -1,0 +1,155 @@
+/* ------------------------------
+   DASHBOARD FOOTER STYLES
+   Modern, professional, and NGCDF-themed
+---------------------------------*/
+
+footer {
+  position: relative;
+  background: #008000;
+  color: #ffffff;
+  padding: 2.5rem 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  width: 100%; /* ✅ Always fills available space inside flex container */
+  margin: 0; /* ✅ No gap on left or right */
+}
+
+/* --- Remove this block (no longer needed)
+.sidebar.collapsed ~ footer {
+  margin-left: 5rem;
+  width: calc(100% - 5rem);
+}
+*/
+
+/* --- Subtle gradient overlay for polish --- */
+footer::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background: linear-gradient(to right, #16a34a, #16a34a, #16a34a);
+  border-radius: 2px;
+}
+
+/* --- Footer top section --- */
+.footer-top {
+  width: 100%;
+  max-width: 1200px;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.footer-section {
+  flex: 1;
+  min-width: 230px;
+}
+
+.footer-section h4 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin-bottom: 0.8rem;
+  color: #ffffff;
+  border-left: 4px solid #16a34a;
+  padding-left: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.footer-section ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.footer-section li {
+  margin-bottom: 0.5rem;
+}
+
+.footer-section a {
+  color: #c9f9e2;
+  text-decoration: none;
+  transition: color 0.3s ease, transform 0.25s ease;
+}
+
+.footer-section a:hover {
+  color: #ffffff;
+  transform: translateX(5px);
+}
+
+/* --- Social Icons --- */
+.footer-social {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  margin-top: 1rem;
+}
+
+.footer-social a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.12);
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  color: #ffffff;
+  transition: all 0.3s ease;
+}
+
+.footer-social a:hover {
+  background: #008000;
+  transform: translateY(-4px);
+  box-shadow: 0 4px 10px rgba(22, 163, 74, 0.4);
+}
+
+/* --- Bottom Section --- */
+.footer-bottom {
+  width: 100%;
+  border-top: 1px solid rgba(255, 255, 255, 0.25);
+  padding-top: 1.3rem;
+  text-align: center;
+  font-size: 0.9rem;
+  color: #d1fae5;
+}
+
+.footer-bottom a {
+  color: #a7f3d0;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+
+.footer-bottom a:hover {
+  color: #ffffff;
+  text-decoration: underline;
+}
+
+/* --- Footer hover transition --- */
+footer:hover {
+  background: #094f1d;
+}
+
+/* --- Responsive Design --- */
+@media (max-width: 768px) {
+  .footer-top {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .footer-section {
+    min-width: 100%;
+  }
+
+  .footer-social {
+    justify-content: center;
+  }
+}

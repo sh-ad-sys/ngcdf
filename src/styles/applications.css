@@ -1,0 +1,191 @@
+.applications-container {
+  background: #f9fafb;
+  border-radius: 12px;
+  padding: 24px;
+  min-height: 100vh;
+  color: #1e293b;
+}
+
+.applications-header h1 {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #1d4ed8;
+}
+
+.applications-header p {
+  color: #64748b;
+  margin-bottom: 1.5rem;
+}
+
+.applications-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 20px;
+  align-items: center;
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.5rem 1rem;
+  flex: 1;
+}
+
+.search-bar input {
+  border: none;
+  outline: none;
+  margin-left: 8px;
+  width: 100%;
+  background: transparent;
+  color: #334155;
+}
+
+.filter-dropdown {
+  display: flex;
+  align-items: center;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.5rem 1rem;
+}
+
+.filter-dropdown select {
+  border: none;
+  outline: none;
+  margin-left: 8px;
+  background: transparent;
+  color: #334155;
+  cursor: pointer;
+}
+
+.applications-table {
+  overflow-x: auto;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.03);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+th, td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  text-align: left;
+}
+
+th {
+  background: #f8fafc;
+  font-weight: 600;
+  color: #475569;
+}
+
+.applicant-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.profile-pic img {
+  border-radius: 50%;
+}
+
+.status {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.status.pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status.approved {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status.rejected {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.actions button {
+  margin-right: 8px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.view-btn {
+  color: #2563eb;
+}
+
+.approve-btn {
+  color: #16a34a;
+}
+
+.reject-btn {
+  color: #dc2626;
+}
+
+.actions button:hover {
+  transform: scale(1.1);
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 50;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  width: 95%;
+  max-width: 450px;
+  text-align: center;
+}
+
+.modal-content h2 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: #1e40af;
+}
+
+.modal-body p {
+  margin: 6px 0;
+  color: #334155;
+}
+
+.modal-actions button {
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  cursor: pointer;
+  margin-top: 16px;
+  transition: 0.2s ease;
+}
+
+.modal-actions button:hover {
+  background: #1e3a8a;
+}
