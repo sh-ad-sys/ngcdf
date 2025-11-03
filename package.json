@@ -23,8 +23,12 @@
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "recharts": "^3.3.0",
+<<<<<<< HEAD
     "tailwind-merge": "^3.3.1",
     "xlsx": "^0.18.5"
+=======
+    "tailwind-merge": "^3.3.1"
+>>>>>>> 4831e9450ab77cc494a93f0ecdf794cb0a33c758
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
@@ -32,7 +36,10 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+<<<<<<< HEAD
     "@types/xlsx": "^0.0.35",
+=======
+>>>>>>> 4831e9450ab77cc494a93f0ecdf794cb0a33c758
     "eslint": "^9",
     "eslint-config-next": "15.5.6",
     "tailwindcss": "^4",
