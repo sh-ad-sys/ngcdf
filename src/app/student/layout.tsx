@@ -7,11 +7,9 @@ import {
   Home,
   FileText,
   DollarSign,
-  Bell,
-  Settings,
+  User,
   Menu,
   X,
-  LogOut,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Footer from "../../components/Footer";
@@ -25,8 +23,7 @@ const navItems = [
   { name: "Home", icon: Home, path: "/student" },
   { name: "My Applications", icon: FileText, path: "/student/application" },
   { name: "Disbursements", icon: DollarSign, path: "/student/disbursement" },
-  { name: "Notifications", icon: Bell, path: "/student/notifications" },
-  { name: "Settings", icon: Settings, path: "/student/settings" },
+  { name: "My Profile", icon: User, path: "/student/profile" },
 ];
 
 export default function StudentLayout({ children }: StudentLayoutProps) {
@@ -70,19 +67,6 @@ export default function StudentLayout({ children }: StudentLayoutProps) {
               );
             })}
           </nav>
-
-          <div className="sidebar-footer">
-            <button
-              onClick={() => {
-                localStorage.removeItem("student");
-                window.location.href = "/login";
-              }}
-              className="logout-btn"
-            >
-              <LogOut size={18} />
-              {isSidebarOpen && <span>Logout</span>}
-            </button>
-          </div>
         </aside>
       )}
 
@@ -146,18 +130,6 @@ export default function StudentLayout({ children }: StudentLayoutProps) {
                 );
               })}
             </nav>
-
-            <div className="sidebar-footer">
-              <button
-                onClick={() => {
-                  localStorage.removeItem("student");
-                  window.location.href = "/login";
-                }}
-                className="logout-btn"
-              >
-                <LogOut size={18} /> <span>Logout</span>
-              </button>
-            </div>
           </motion.aside>
         )}
       </AnimatePresence>

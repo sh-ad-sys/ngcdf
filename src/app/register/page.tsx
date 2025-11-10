@@ -74,38 +74,59 @@ export default function RegisterPage() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const isEmail = (value: string) => /\S+@\S+\.\S+/.test(value);
+ 
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setError("");
+  setSuccess("");
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setSuccess("");
-
-    if (!formData.fullName.trim())
-      return setError("Please enter your full name.");
-    if (!formData.gender) return setError("Please select your gender.");
-    if (!formData.emailOrAdmNo.trim())
-      return setError("Please enter your Email or Admission Number.");
-    if (!isEmail(formData.emailOrAdmNo)) {
-      if (!/^[A-Za-z0-9\-\/]+$/.test(formData.emailOrAdmNo))
-        return setError("Enter a valid admission number or email.");
+  // ✅ Inline email/admission number validation logic — no unused function
+  const isEmailAddress = /\S+@\S+\.\S+/.test(formData.emailOrAdmNo);
+  if (!isEmailAddress) {
+    if (!/^[A-Za-z0-9\-\/]+$/.test(formData.emailOrAdmNo)) {
+      return setError("Enter a valid email address or admission number.");
     }
-    if (!formData.phone.match(/^07\d{8}$/))
-      return setError("Enter a valid Kenyan phone number (e.g. 07XXXXXXXX).");
-    if (!formData.subCounty) return setError("Please select your sub county.");
-    if (!formData.ward) return setError("Please select your ward.");
-    if (!formData.subWard.trim()) return setError("Please enter your sub ward.");
-    if (!formData.village.trim()) return setError("Please enter your village.");
-    if (formData.password.length < 6)
-      return setError("Password must be at least 6 characters long.");
-    if (formData.password !== formData.confirmPassword)
-      return setError("Passwords do not match.");
+  }
 
-    setSuccess("Registration successful! Redirecting...");
-    setTimeout(() => {
-      window.location.href = "/login";
-    }, 2000);
-  };
+  // ✅ Other validations
+  if (!formData.fullName.trim()) return setError("Please enter your full name.");
+  if (!formData.gender) return setError("Please select your gender.");
+  if (!formData.phone.match(/^07\d{8}$/))
+    return setError("Enter a valid Kenyan phone number (e.g. 07XXXXXXXX).");
+  if (!formData.subCounty) return setError("Please select your sub county.");
+  if (!formData.ward) return setError("Please select your ward.");
+  if (!formData.subWard.trim()) return setError("Please enter your sub ward.");
+  if (!formData.village.trim()) return setError("Please enter your village.");
+  if (formData.password.length < 6)
+    return setError("Password must be at least 6 characters long.");
+  if (formData.password !== formData.confirmPassword)
+    return setError("Passwords do not match.");
+
+  // ✅ Send request
+  try {
+    const response = await fetch("http://localhost/bursarySystem/api/register.php", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(formData),
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      setSuccess("Registration successful!");
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 2000);
+    } else {
+      setError(data.message);
+    }
+  } catch (err) {
+    console.error(err);
+    setError("Server error. Please try again later.");
+  }
+};
+
+
 
   return (
     <div className="register-page">

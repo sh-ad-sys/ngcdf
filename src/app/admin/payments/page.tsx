@@ -1,74 +1,95 @@
 "use client";
 
 import React, { useState } from "react";
-import { Search, Filter, Plus, CheckCircle, Clock, XCircle } from "lucide-react";
+import { Search, Filter, Download, Users, CreditCard } from "lucide-react";
 import { motion } from "framer-motion";
+import * as XLSX from "xlsx";
 import "../../../styles/adminpayments.css";
 
-interface Payment {
+interface Beneficiary {
   id: number;
+  admNo: string;
   studentName: string;
+  school: string;
+  course: string;
+  yearOfStudy: string;
   amount: number;
-  method: string;
-  date: string;
-  status: "Paid" | "Pending" | "Failed";
+  chequeNo: string;
+  awardDate: string;
 }
 
 export default function PaymentsPage() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [showModal, setShowModal] = useState(false);
-  const [payments, setPayments] = useState<Payment[]>([
-    { id: 1, studentName: "John Doe", amount: 5000, method: "M-Pesa", date: "2025-10-18", status: "Paid" },
-    { id: 2, studentName: "Jane Smith", amount: 4500, method: "Bank Transfer", date: "2025-10-19", status: "Pending" },
-    { id: 3, studentName: "Samuel Kiptoo", amount: 3000, method: "Cash", date: "2025-10-20", status: "Failed" },
+  const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>([
+    {
+      id: 1,
+      admNo: "ADM001",
+      studentName: "John Doe",
+      school: "University of Nairobi",
+      course: "BSc Computer Science",
+      yearOfStudy: "3rd Year",
+      amount: 25000,
+      chequeNo: "CHQ001245",
+      awardDate: "2025-10-01",
+    },
+    {
+      id: 2,
+      admNo: "ADM002",
+      studentName: "Jane Smith",
+      school: "Kenyatta University",
+      course: "BA Economics",
+      yearOfStudy: "2nd Year",
+      amount: 20000,
+      chequeNo: "CHQ001246",
+      awardDate: "2025-10-02",
+    },
+    {
+      id: 3,
+      admNo: "ADM003",
+      studentName: "Samuel Kiptoo",
+      school: "Moi University",
+      course: "BEd Arts",
+      yearOfStudy: "4th Year",
+      amount: 18000,
+      chequeNo: "CHQ001247",
+      awardDate: "2025-10-03",
+    },
   ]);
 
-  const [newPayment, setNewPayment] = useState({
-    studentName: "",
-    amount: "",
-    method: "",
-    date: "",
-    status: "Pending",
-  });
+  const filteredBeneficiaries = beneficiaries.filter(
+    (b) =>
+      b.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      b.school.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      b.admNo.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-  const handleAddPayment = () => {
-    if (!newPayment.studentName || !newPayment.amount || !newPayment.method) return;
-    setPayments([
-      ...payments,
-      {
-        id: payments.length + 1,
-        studentName: newPayment.studentName,
-        amount: parseFloat(newPayment.amount),
-        method: newPayment.method,
-        date: newPayment.date || new Date().toISOString().split("T")[0],
-        status: newPayment.status as "Paid" | "Pending" | "Failed",
-      },
-    ]);
-    setShowModal(false);
-    setNewPayment({ studentName: "", amount: "", method: "", date: "", status: "Pending" });
+  const handleExportExcel = () => {
+    const worksheet = XLSX.utils.json_to_sheet(beneficiaries);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Qualified Students");
+    XLSX.writeFile(workbook, "Bursary_Qualified_Students.xlsx");
   };
 
-  const filteredPayments = payments.filter((p) =>
-    p.studentName.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const totalStudents = beneficiaries.length;
+  const totalAmount = beneficiaries.reduce((sum, b) => sum + b.amount, 0);
 
   return (
     <div className="payments-container">
-      {/* ----- Header Section ----- */}
+      {/* Header */}
       <div className="payments-header">
-        <h1>Payments Management</h1>
-        <button className="add-btn" onClick={() => setShowModal(true)}>
-          <Plus size={18} /> Add Payment
+        <h1>Qualified Bursary Beneficiaries</h1>
+        <button className="add-btn" onClick={handleExportExcel}>
+          <Download size={18} /> Export to Excel
         </button>
       </div>
 
-      {/* ----- Search & Filter Bar ----- */}
+      {/* Search & Filter */}
       <div className="search-filter-bar">
         <div className="search-box">
           <Search size={18} />
           <input
             type="text"
-            placeholder="Search by student name..."
+            placeholder="Search by name, school, or adm no..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -78,128 +99,62 @@ export default function PaymentsPage() {
         </button>
       </div>
 
-      {/* ----- Stats Cards ----- */}
+      {/* Summary Stats */}
       <div className="stats-grid">
         <motion.div whileHover={{ scale: 1.05 }} className="stat-card success">
-          <CheckCircle size={26} />
+          <Users size={26} />
           <div>
-            <h3>Paid</h3>
-            <p>{payments.filter((p) => p.status === "Paid").length}</p>
+            <h3>Total Qualified Students</h3>
+            <p>{totalStudents}</p>
           </div>
         </motion.div>
 
-        <motion.div whileHover={{ scale: 1.05 }} className="stat-card warning">
-          <Clock size={26} />
+        <motion.div whileHover={{ scale: 1.05 }} className="stat-card info">
+          <CreditCard size={26} />
           <div>
-            <h3>Pending</h3>
-            <p>{payments.filter((p) => p.status === "Pending").length}</p>
-          </div>
-        </motion.div>
-
-        <motion.div whileHover={{ scale: 1.05 }} className="stat-card danger">
-          <XCircle size={26} />
-          <div>
-            <h3>Failed</h3>
-            <p>{payments.filter((p) => p.status === "Failed").length}</p>
+            <h3>Total Amount Awarded (KSH)</h3>
+            <p>{totalAmount.toLocaleString()}</p>
           </div>
         </motion.div>
       </div>
 
-      {/* ----- Payments Table ----- */}
+      {/* Beneficiaries Table */}
       <div className="table-wrapper">
         <table className="payments-table">
           <thead>
             <tr>
-              <th>ID</th>
+              <th>#</th>
+              <th>Adm No</th>
               <th>Student Name</th>
+              <th>School</th>
+              <th>Course</th>
+              <th>Year of Study</th>
               <th>Amount (KSH)</th>
-              <th>Method</th>
-              <th>Date</th>
-              <th>Status</th>
+              <th>Cheque No</th>
+              <th>Date Awarded</th>
             </tr>
           </thead>
           <tbody>
-            {filteredPayments.map((payment) => (
-              <tr key={payment.id}>
-                <td>{payment.id}</td>
-                <td>{payment.studentName}</td>
-                <td>{payment.amount.toLocaleString()}</td>
-                <td>{payment.method}</td>
-                <td>{payment.date}</td>
-                <td>
-                  <span className={`status-badge ${payment.status.toLowerCase()}`}>
-                    {payment.status}
-                  </span>
-                </td>
+            {filteredBeneficiaries.map((b) => (
+              <tr key={b.id}>
+                <td>{b.id}</td>
+                <td>{b.admNo}</td>
+                <td>{b.studentName}</td>
+                <td>{b.school}</td>
+                <td>{b.course}</td>
+                <td>{b.yearOfStudy}</td>
+                <td>{b.amount.toLocaleString()}</td>
+                <td>{b.chequeNo}</td>
+                <td>{b.awardDate}</td>
               </tr>
             ))}
           </tbody>
         </table>
 
-        {filteredPayments.length === 0 && (
-          <p className="no-results">No payments found matching your search.</p>
+        {filteredBeneficiaries.length === 0 && (
+          <p className="no-results">No matching records found.</p>
         )}
       </div>
-
-      {/* ----- Add Payment Modal ----- */}
-      {showModal && (
-        <div className="modal-overlay">
-          <motion.div
-            className="modal-content"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-          >
-            <h2>Add New Payment</h2>
-            <div className="form-group">
-              <label>Student Name</label>
-              <input
-                type="text"
-                value={newPayment.studentName}
-                onChange={(e) => setNewPayment({ ...newPayment, studentName: e.target.value })}
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Amount (KSH)</label>
-              <input
-                type="number"
-                value={newPayment.amount}
-                onChange={(e) => setNewPayment({ ...newPayment, amount: e.target.value })}
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Payment Method</label>
-              <input
-                type="text"
-                value={newPayment.method}
-                onChange={(e) => setNewPayment({ ...newPayment, method: e.target.value })}
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Status</label>
-              <select
-                value={newPayment.status}
-                onChange={(e) => setNewPayment({ ...newPayment, status: e.target.value })}
-              >
-                <option value="Paid">Paid</option>
-                <option value="Pending">Pending</option>
-                <option value="Failed">Failed</option>
-              </select>
-            </div>
-
-            <div className="modal-actions">
-              <button className="save-btn" onClick={handleAddPayment}>
-                Save
-              </button>
-              <button className="cancel-btn" onClick={() => setShowModal(false)}>
-                Cancel
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      )}
     </div>
   );
 }

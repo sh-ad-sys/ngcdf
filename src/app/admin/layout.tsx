@@ -12,7 +12,7 @@ import {
   LogOut,
   Menu,
   X,
-  Bell,
+  
   FilePieChart,
   CreditCard,
 } from "lucide-react";
@@ -31,7 +31,7 @@ const navItems = [
   { name: "Disbursements", icon: DollarSign, path: "/admin/disbursement" },
   { name: "Payments", icon: CreditCard, path: "/admin/payments" },
   { name: "Reports", icon: FilePieChart, path: "/admin/reports" },
-  { name: "Notifications", icon: Bell, path: "/admin/notifications" },
+  
   { name: "Settings", icon: Settings, path: "/admin/settings" },
 ];
 

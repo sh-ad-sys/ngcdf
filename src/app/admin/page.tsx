@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Users,
   CheckCircle,
@@ -22,7 +22,9 @@ import {
   Cell,
   ResponsiveContainer,
 } from "recharts";
+import Header from "../../components/header"; // ✅ Import header
 import "../../styles/adminDashboard.css";
+import { useRouter } from "next/navigation";
 
 interface Application {
   name: string;
@@ -33,6 +35,23 @@ interface Application {
 
 export default function AdminDashboard() {
   const [search, setSearch] = useState("");
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const router = useRouter();
+
+  // ✅ Check login status
+  useEffect(() => {
+    const loggedIn = localStorage.getItem("isLoggedIn");
+    if (!loggedIn) {
+      router.push("/"); // redirect to login page if not logged in
+    } else {
+      setIsLoggedIn(true);
+    }
+  }, [router]);
+
+  const handleLogout = () => {
+    localStorage.removeItem("isLoggedIn");
+    router.push("/");
+  };
 
   const [stats] = useState({
     totalApplicants: 210,
@@ -62,8 +81,13 @@ export default function AdminDashboard() {
 
   const COLORS = ["#22c55e", "#facc15", "#ef4444"];
 
+  if (!isLoggedIn) return null; // ⏳ Prevent flashing content before redirect
+
   return (
-    <div className="admin-dashboard" title-bold>
+    <div className="admin-dashboard">
+      {/* ✅ Header shown only after login */}
+      <Header role="admin" onLogout={handleLogout} />
+
       <h1 className="dashboard-title">📊 Admin Dashboard Overview</h1>
 
       {/* === Stats Cards === */}

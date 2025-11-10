@@ -1,5 +1,10 @@
+/* -------------------------------
+   DASHBOARD HEADER STYLES
+   Clean, responsive & interactive
+---------------------------------- */
+
 .dashboard-header {
-  position: fixed;          /* fixed keeps it locked at top */
+  position: fixed;
   top: 0;
   left: 0;
   width: 100%;
@@ -15,8 +20,7 @@
   margin: 0;
 }
 
-
-/* Left section with logo and title inline */
+/* Left section with logo and title */
 .header-left {
   display: flex;
   align-items: center;
@@ -40,8 +44,8 @@
   color: #000000;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  margin:0;
-   padding: 0;
+  margin: 0;
+  padding: 0;
 }
 
 .role-label {
@@ -54,11 +58,12 @@
 .header-right {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 1.2rem;
 }
 
 /* --- Icon Buttons --- */
 .icon-btn {
+  position: relative;
   background: transparent;
   border: none;
   color: #000000;
@@ -73,25 +78,80 @@
   transform: translateY(-2px);
 }
 
-/* --- User Info --- */
-.user-info {
+/* 🔴 Notification Red Dot */
+.icon-btn::after {
+  content: "";
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 8px;
+  height: 8px;
+  background-color: #dc2626; /* red dot */
+  border-radius: 50%;
+  opacity: 0;
+  transform: scale(0);
+  transition: all 0.3s ease;
+}
+
+/* Show red dot when unread */
+.icon-btn.has-unread::after {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* --- Dropdown Panels --- */
+.dropdown-panel {
+  position: absolute;
+  right: 0;
+  top: 45px;
+  width: 280px;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  animation: fadeIn 0.3s ease forwards;
+  z-index: 999;
+}
+
+.dropdown-header {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.3rem 0.6rem;
-  border: 1px solid rgba(0, 0, 0, 0.2);
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.8);
+  background: #f8f9fa;
+  padding: 0.6rem 1rem;
+  font-weight: 600;
+  color: #000;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
 }
 
-.user-icon {
-  color: #000000;
+.dropdown-item {
+  padding: 0.7rem 1rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  color: #333;
+  transition: background 0.2s;
 }
 
-.user-name {
-  font-weight: 500;
-  font-size: 0.95rem;
-  color: #000000;
+.dropdown-item:hover {
+  background: #f4f4f4;
+}
+
+.dropdown-empty {
+  padding: 1rem;
+  text-align: center;
+  color: #777;
+}
+
+.close-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #555;
+  transition: color 0.3s ease;
+}
+
+.close-btn:hover {
+  color: #000;
 }
 
 /* --- Logout Button --- */
@@ -110,19 +170,22 @@
 }
 
 .logout-btn:hover {
-  background: #dc2626; /* red hover background */
-  color: #ffffff; /* white text */
+  background: #dc2626;
+  color: #ffffff;
   border-color: #dc2626;
   transform: translateY(-2px);
 }
-/* Ensure header and main content are flush */
-.dashboard-header {
-  margin: 0;
-}
 
-main.main-content {
-  margin-top: 0 !important;
-  padding-top: 0 !important;
+/* Smooth Dropdown Animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* --- Responsive Design --- */
@@ -133,9 +196,5 @@ main.main-content {
 
   .header-right {
     gap: 0.6rem;
-  }
-
-  .user-name {
-    display: none;
   }
 }
