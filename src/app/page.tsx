@@ -27,54 +27,66 @@ export default function LoginPage() {
 
   // ✅ Handle login submission
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    setSuccess("");
+  e.preventDefault();
+  setLoading(true);
+  setError("");
+  setSuccess("");
 
-    try {
-      const response = await fetch("http://localhost/bursarySystem/api/login.php", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
+  try {
+    const response = await fetch("http://localhost/bursarySystem/api/login.php", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        identifier: formData.identifier.trim(),
+        password: formData.password.trim(),
+      }),
+    });
 
-      const data = await response.json();
+    const text = await response.text(); // <-- debug line
+    console.log("Raw PHP response:", text); // see what PHP returns
 
-      if (data.success) {
-        setSuccess(data.message);
+    const data = JSON.parse(text);
 
-        // ✅ Store session in localStorage
-        localStorage.setItem("user", JSON.stringify(data.user));
-        localStorage.setItem("isLoggedIn", "true");
+    if (data.success) {
+      setSuccess(data.message);
+      
+// Save user info
+localStorage.setItem("user", JSON.stringify(data.user));
+localStorage.setItem("isLoggedIn", "true");
 
-        // ✅ Hide success message after 2.5 seconds
-        setTimeout(() => setSuccess(""), 2500);
+// Normalize ID (support id OR user_id)
+const userId = data.user.id || data.user.user_id;
 
-        // ✅ Redirect based on user role
-        setTimeout(() => {
-          if (data.user.role === "admin") {
-            window.location.href = "/admin";
-          } else {
-            window.location.href = "/student";
-          }
-        }, 1500);
-      } else {
-        setError(data.message);
+// 🔥 Save student ID
+if (data.user.role === "student") {
+  localStorage.setItem("student_id", userId);
+}
 
-        // ✅ Hide error message after 3 seconds
-        setTimeout(() => setError(""), 3000);
-      }
-    } catch (err) {
-      console.error("Login error:", err);
-      setError("Server error. Please try again later.");
+// 🔥 Save admin ID
+if (data.user.role === "admin") {
+  localStorage.setItem("admin_id", userId);
+}
 
-      // ✅ Hide server error message after 3 seconds
-      setTimeout(() => setError(""), 3000);
-    } finally {
-      setLoading(false);
+
+      setTimeout(() => {
+        if (data.user.role === "admin") {
+          window.location.href = "/admin";
+        } else {
+          window.location.href = "/student";
+        }
+      }, 1500);
+    } else {
+      setError(data.message);
     }
-  };
+  } catch (err) {
+    console.error("Login error:", err);
+    setError("Server error. Please try again later.");
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="relative w-full h-screen overflow-hidden">
