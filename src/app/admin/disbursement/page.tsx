@@ -1,296 +1,203 @@
 "use client";
 
-import { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
-  PlusCircle,
-  CheckCircle,
-  XCircle,
-  Clock,
-  Search,
-  Download,
-  FileText,
-} from "lucide-react";
-import * as XLSX from "xlsx";
+  Select,
+  SelectContent,
+  SelectTrigger,
+  SelectItem,
+  SelectValue,
+} from "@/components/ui/select";
+import { Search } from "lucide-react";
+import { motion } from "framer-motion";
+
 
 interface Disbursement {
   id: number;
-  studentName: string;
-  institution: string;
-  amount: number;
+  application_id: number;
   chequeNumber: string;
-  status: "Approved" | "Pending" | "Rejected";
-  date: string;
-  remarks?: string;
+  amount: number;
+  paymentDate: string;
+  institution: string;
+  status: string;
 }
 
-export default function DisbursementsPage() {
-  const [disbursements, setDisbursements] = useState<Disbursement[]>([
-    {
-      id: 1,
-      studentName: "Jane Mwikali",
-      institution: "University of Nairobi",
-      amount: 25000,
-      chequeNumber: "CHQ-001245",
-      status: "Approved",
-      date: "2025-10-15",
-      remarks: "Cheque sent to institution",
-    },
-    {
-      id: 2,
-      studentName: "David Kamau",
-      institution: "Kenyatta University",
-      amount: 18000,
-      chequeNumber: "CHQ-001246",
-      status: "Pending",
-      date: "2025-10-17",
-      remarks: "Awaiting verification",
-    },
-    {
-      id: 3,
-      studentName: "Faith Njeri",
-      institution: "JKUAT",
-      amount: 20000,
-      chequeNumber: "CHQ-001247",
-      status: "Rejected",
-      date: "2025-10-18",
-      remarks: "Duplicate application",
-    },
-  ]);
+export default function AdminDisbursementsPage() {
+  const [disbursements, setDisbursements] = useState<Disbursement[]>([]);
+  const [filtered, setFiltered] = useState<Disbursement[]>([]);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All");
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  // Fetch data
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const res = await fetch("http://localhost/bursarySystem/api/disbursement.php");
+        const data = await res.json();
 
-  // Filter by student or institution
-  const filteredDisbursements = disbursements.filter(
-    (d) =>
-      d.studentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      d.institution.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+        if (data.success) {
+          setDisbursements(data.data);
+          setFiltered(data.data);
+        }
+      } catch {
+        console.log("Error loading disbursements");
+      }
+    }
 
-  // Export to Excel
-  const handleExport = () => {
-    const ws = XLSX.utils.json_to_sheet(disbursements);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Disbursements");
-    XLSX.writeFile(wb, "Disbursement_Report.xlsx");
-  };
+    loadData();
+  }, []);
 
-  const handleAddDisbursement = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const newDisbursement: Disbursement = {
-      id: disbursements.length + 1,
-      studentName: formData.get("studentName") as string,
-      institution: formData.get("institution") as string,
-      amount: Number(formData.get("amount")),
-      chequeNumber: formData.get("chequeNumber") as string,
-      remarks: formData.get("remarks") as string,
-      status: "Pending",
-      date: new Date().toISOString().split("T")[0],
-    };
-    setDisbursements((prev) => [...prev, newDisbursement]);
-    setIsModalOpen(false);
-    e.currentTarget.reset();
-  };
+  // Handle Search & Filter
+  useEffect(() => {
+    let results = disbursements;
+
+    if (search.trim() !== "") {
+      results = results.filter((item) =>
+        item.institution.toLowerCase().includes(search.toLowerCase()) ||
+        item.chequeNumber.toLowerCase().includes(search.toLowerCase())
+      );
+    }
+
+    if (statusFilter !== "All") {
+      results = results.filter((item) => item.status === statusFilter);
+    }
+
+    setFiltered(results);
+  }, [search, statusFilter, disbursements]);
 
   return (
-    <div className="flex flex-col gap-6 p-6 bg-gray-50 min-h-screen">
-      {/* HEADER */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-          <FileText className="w-6 h-6 text-green-600" />
-          Disbursement Management
-        </h1>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition"
-        >
-          <PlusCircle className="w-5 h-5" />
-          Add Disbursement
-        </button>
+    <div className="p-6 space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <h1 className="text-3xl font-bold">Disbursements</h1>
+
+        <div className="flex items-center gap-3">
+          {/* Search */}
+          <div className="relative w-64">
+            <Input
+              placeholder="Search by institution or cheque..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="rounded-xl"
+            />
+            <Search className="absolute right-3 top-3 h-4 w-4 text-gray-500" />
+          </div>
+
+          {/* Status Filter */}
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-40 rounded-xl">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="All">All</SelectItem>
+              <SelectItem value="Pending">Pending</SelectItem>
+              <SelectItem value="Approved">Approved</SelectItem>
+              <SelectItem value="Completed">Completed</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
-      {/* SEARCH + EXPORT */}
-      <div className="flex flex-col md:flex-row justify-between items-center bg-white p-4 rounded-lg shadow-sm gap-4">
-        <div className="relative w-full md:w-1/3">
-          <Search className="absolute left-3 top-3 text-gray-400 w-5 h-5" />
-          <input
-            type="text"
-            placeholder="Search by student or institution..."
-            className="pl-10 w-full border border-gray-200 rounded-md py-2 focus:ring-2 focus:ring-green-600 focus:outline-none"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+      {/* Stats Summary */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+        {/* Total */}
+        <div className="p-4 bg-linear-to-r from-slate-50 to-white rounded-lg shadow-sm border flex flex-col">
+          <span className="text-sm text-gray-500 font-medium">Total Disbursements</span>
+          <span className="text-2xl font-bold mt-1">{disbursements.length}</span>
         </div>
 
-        <button
-          onClick={handleExport}
-          className="flex items-center gap-2 text-green-700 font-medium border border-green-600 px-4 py-2 rounded-md hover:bg-green-600 hover:text-white transition"
-        >
-          <Download className="w-5 h-5" />
-          Export to Excel
-        </button>
+        {/* Total Amount */}
+        <div className="p-4 bg-linear-to-r from-slate-50 to-white rounded-lg shadow-sm border flex flex-col">
+          <span className="text-sm text-gray-500 font-medium">Total Amount</span>
+          <span className="text-xl font-bold mt-1 text-green-600">
+            KES {disbursements.reduce((sum, d) => sum + d.amount, 0).toLocaleString()}
+          </span>
+        </div>
+
+        {/* Completed */}
+        <div className="p-4 bg-linear-to-r from-slate-50 to-white rounded-lg shadow-sm border flex flex-col">
+          <span className="text-sm text-gray-500 font-medium">Completed</span>
+          <span className="text-xl font-bold mt-1">
+            {disbursements.filter((d) => d.status === "Completed").length}
+          </span>
+        </div>
+
+        {/* Pending */}
+        <div className="p-4 bg-linear-to-r from-slate-50 to-white rounded-lg shadow-sm border flex flex-col">
+          <span className="text-sm text-gray-500 font-medium">Pending</span>
+          <span className="text-xl font-bold mt-1">
+            {disbursements.filter((d) => d.status === "Pending").length}
+          </span>
+        </div>
+
+        {/* Approved */}
+        <div className="p-4 bg-linear-to-r from-slate-50 to-white rounded-lg shadow-sm border flex flex-col">
+          <span className="text-sm text-gray-500 font-medium">Approved</span>
+          <span className="text-xl font-bold mt-1">
+            {disbursements.filter((d) => d.status === "Approved").length}
+          </span>
+        </div>
       </div>
 
-      {/* TABLE */}
-      <div className="bg-white rounded-lg shadow-md overflow-x-auto">
-        <table className="min-w-full border-collapse">
-          <thead className="bg-green-600 text-white">
+      {/* Table */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white p-4 rounded-xl shadow-lg border overflow-x-auto"
+      >
+        <table className="min-w-full text-sm">
+          <thead className="border-b bg-gray-50">
             <tr>
-              <th className="py-3 px-4 text-left">Student Name</th>
+              <th className="py-3 px-4 text-left">Cheque</th>
               <th className="py-3 px-4 text-left">Institution</th>
-              <th className="py-3 px-4 text-left">Cheque No.</th>
-              <th className="py-3 px-4 text-left">Amount (KSH)</th>
+              <th className="py-3 px-4 text-left">Amount</th>
+              <th className="py-3 px-4 text-left">Payment Date</th>
               <th className="py-3 px-4 text-left">Status</th>
-              <th className="py-3 px-4 text-left">Date</th>
-              <th className="py-3 px-4 text-left">Remarks</th>
+              <th className="py-3 px-4"></th>
             </tr>
           </thead>
+
           <tbody>
-            {filteredDisbursements.map((d) => (
-              <tr
-                key={d.id}
-                className="border-b hover:bg-gray-50 transition-colors"
-              >
-                <td className="py-3 px-4 font-semibold text-gray-800">
-                  {d.studentName}
+            {filtered.map((item) => (
+              <tr key={item.id} className="border-b hover:bg-gray-50 transition">
+                <td className="py-3 px-4 font-medium">{item.chequeNumber}</td>
+                <td className="py-3 px-4">{item.institution}</td>
+                <td className="py-3 px-4 text-green-600 font-semibold">
+                  KES {item.amount.toLocaleString()}
                 </td>
-                <td className="py-3 px-4 text-gray-700">{d.institution}</td>
-                <td className="py-3 px-4 text-gray-700">{d.chequeNumber}</td>
-                <td className="py-3 px-4 text-green-700 font-bold">
-                  {d.amount.toLocaleString()}
-                </td>
+                <td className="py-3 px-4">{item.paymentDate}</td>
                 <td className="py-3 px-4">
                   <span
-                    className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${
-                      d.status === "Approved"
-                        ? "bg-green-100 text-green-700"
-                        : d.status === "Pending"
+                    className={`px-3 py-1 rounded-lg text-xs font-medium ${
+                      item.status === "Pending"
                         ? "bg-yellow-100 text-yellow-700"
-                        : "bg-red-100 text-red-700"
+                        : item.status === "Approved"
+                        ? "bg-blue-100 text-blue-700"
+                        : "bg-green-100 text-green-700"
                     }`}
                   >
-                    {d.status === "Approved" && (
-                      <CheckCircle className="w-4 h-4" />
-                    )}
-                    {d.status === "Pending" && <Clock className="w-4 h-4" />}
-                    {d.status === "Rejected" && <XCircle className="w-4 h-4" />}
-                    {d.status}
+                    {item.status}
                   </span>
                 </td>
-                <td className="py-3 px-4 text-gray-600">{d.date}</td>
-                <td className="py-3 px-4 text-gray-600 italic">{d.remarks}</td>
-              </tr>
-            ))}
-
-            {filteredDisbursements.length === 0 && (
-              <tr>
-                <td
-                  colSpan={7}
-                  className="text-center py-6 text-gray-500 italic"
-                >
-                  No disbursement records found.
+                <td className="py-3 px-4">
+                  <Button size="sm" className="rounded-lg">
+                    View
+                  </Button>
                 </td>
               </tr>
-            )}
+            ))}
           </tbody>
         </table>
-      </div>
 
-      {/* MODAL */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-          <div className="bg-white w-full max-w-lg rounded-xl shadow-xl p-6 relative">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4 border-b pb-2">
-              New Disbursement Record
-            </h2>
-
-            <form onSubmit={handleAddDisbursement} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Student Name
-                </label>
-                <input
-                  required
-                  name="studentName"
-                  type="text"
-                  className="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-green-600 focus:outline-none"
-                  placeholder="Enter student name"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Institution
-                </label>
-                <input
-                  required
-                  name="institution"
-                  type="text"
-                  className="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-green-600 focus:outline-none"
-                  placeholder="Enter institution name"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Amount (KSH)
-                  </label>
-                  <input
-                    required
-                    name="amount"
-                    type="number"
-                    className="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-green-600 focus:outline-none"
-                    placeholder="Enter amount"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Cheque Number
-                  </label>
-                  <input
-                    required
-                    name="chequeNumber"
-                    type="text"
-                    className="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-green-600 focus:outline-none"
-                    placeholder="e.g., CHQ-001245"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Remarks
-                </label>
-                <textarea
-                  name="remarks"
-                  rows={3}
-                  className="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-green-600 focus:outline-none"
-                  placeholder="Add any remarks..."
-                />
-              </div>
-
-              <div className="flex justify-end gap-3 mt-6">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition"
-                >
-                  Save Record
-                </button>
-              </div>
-            </form>
+        {/* Empty State */}
+        {filtered.length === 0 && (
+          <div className="text-center py-10 text-gray-500">
+            No disbursement records found
           </div>
-        </div>
-      )}
+        )}
+      </motion.div>
     </div>
   );
 }

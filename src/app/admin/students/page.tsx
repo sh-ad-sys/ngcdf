@@ -1,293 +1,392 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { Search, UserPlus, Edit, Trash2, Users, X } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import Image from "next/image";
-import "../../../styles/adminDashboard.css";
+import { useEffect, useState } from "react";
+import { Search, Eye, Loader2, Lock, Unlock, Check, X } from "lucide-react";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+
+import { Badge } from "@/components/ui/badge";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Table, TableHeader, TableRow, TableCell, TableBody } from "@/components/ui/table";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
+
+// ================= INTERFACES =================
 
 interface Student {
   id: number;
-  name: string;
+  student_id: number;
+  full_name: string;
   email: string;
   phone: string;
+  gender: string;
+  national_id: string;
+  admission_no: string;
   institution: string;
   course: string;
+  year_of_study: string;
+  avatar: string | null;
   status: string;
-  profileImage?: string;
+  verification_status: string;
+  disbursement_status: string;
+  admin_notes: string;
+  fundingHistory: FundingRecord[];
+  academicHistory: AcademicRecord[];
 }
 
-const AdminStudentsPage: React.FC = () => {
+interface FundingRecord {
+  year: number;
+  bursary: string;
+  amount: number;
+  status: string;
+  disbursements: {
+    date: string;
+    amount: number;
+    mode: string;
+  }[];
+}
+
+interface AcademicRecord {
+  year: number;
+  semester: string;
+  remarks: string;
+}
+
+// =================== PAGE COMPONENT ===================
+
+export default function AdminStudentsPage() {
   const [students, setStudents] = useState<Student[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [isModalOpen, setModalOpen] = useState(false);
-  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
-  const [formData, setFormData] = useState<Student>({
-    id: 0,
-    name: "",
-    email: "",
-    phone: "",
-    institution: "",
-    course: "",
-    status: "Active",
-  });
+  const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<Student | null>(null);
+  const [search, setSearch] = useState("");
+
+  const [actionLoading, setActionLoading] = useState(false);
+
+  // ================= FETCH STUDENTS =================
+  async function loadStudents() {
+    try {
+      const res = await fetch(
+        "http://localhost/bursarySystem/api/admin/get_admin_students.php"
+      );
+      const json = await res.json();
+
+      if (json.success && Array.isArray(json.students)) {
+        const mapped = json.students.map((s: Student) => ({
+          ...s,
+          fundingHistory: [],
+          academicHistory: [],
+        }));
+
+        setStudents(mapped);
+      }
+    } catch (err) {
+      console.error("Fetch error:", err);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
-    const sampleData: Student[] = [
-      {
-        id: 1,
-        name: "Grace Njeri",
-        email: "grace.njeri@example.com",
-        phone: "0712345678",
-        institution: "University of Nairobi",
-        course: "Computer Science",
-        status: "Active",
-      },
-      {
-        id: 2,
-        name: "Brian Otieno",
-        email: "brian.otieno@example.com",
-        phone: "0723456789",
-        institution: "Kenyatta University",
-        course: "Economics",
-        status: "Suspended",
-      },
-      {
-        id: 3,
-        name: "Jane Mwikali",
-        email: "jane.mwikali@example.com",
-        phone: "0701122334",
-        institution: "Egerton University",
-        course: "Agriculture",
-        status: "Active",
-      },
-    ];
-    setStudents(sampleData);
+    loadStudents();
   }, []);
 
-  const filteredStudents = students.filter(
-    (student) =>
-      student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.institution.toLowerCase().includes(searchTerm.toLowerCase())
+  // ================= FILTER =================
+  const filtered = students.filter(
+    (s) =>
+      s.full_name.toLowerCase().includes(search.toLowerCase()) ||
+      s.email.toLowerCase().includes(search.toLowerCase()) ||
+      s.admission_no.toLowerCase().includes(search.toLowerCase()) ||
+      s.national_id.toLowerCase().includes(search.toLowerCase())
   );
 
-  const openAddModal = () => {
-    setEditingStudent(null);
-    setFormData({
-      id: 0,
-      name: "",
-      email: "",
-      phone: "",
-      institution: "",
-      course: "",
-      status: "Active",
-    });
-    setModalOpen(true);
-  };
+  // ================= ADMIN ACTION HANDLER =================
+  async function handleAction(action: string) {
+    if (!selected) return;
 
-  const openEditModal = (student: Student) => {
-    setEditingStudent(student);
-    setFormData(student);
-    setModalOpen(true);
-  };
+    setActionLoading(true);
 
-  const handleSave = () => {
-    if (editingStudent) {
-      setStudents((prev) =>
-        prev.map((s) => (s.id === editingStudent.id ? formData : s))
-      );
-    } else {
-      setStudents((prev) => [...prev, { ...formData, id: Date.now() }]);
+    try {
+      const res = await fetch(`http://localhost/bursarySystem/api/admin/${action}.php`, {
+        method: "POST",
+        body: JSON.stringify({ student_id: selected.id }),
+      });
+
+      const json = await res.json();
+
+      alert(json.message || "Success");
+
+      // Refresh list
+      await loadStudents();
+      setSelected(null);
+    } catch {
+      alert("Error performing action");
+    } finally {
+      setActionLoading(false);
     }
-    setModalOpen(false);
-  };
-
-  const handleDelete = (id: number) => {
-    if (confirm("Are you sure you want to delete this student?")) {
-      setStudents((prev) => prev.filter((s) => s.id !== id));
-    }
-  };
+  }
 
   return (
-    <div className="admin-students-page">
-      {/* Header */}
-      <div className="page-header">
-        <div className="header-left">
-          <Users size={28} className="text-blue-600" />
-          <h1>Manage Students</h1>
+    <div className="p-6 space-y-6">
+      <h1 className="text-3xl font-bold text-gray-800">Student Management</h1>
+
+      {/* SEARCH */}
+      <div className="flex items-center justify-between">
+        <div className="relative w-80">
+          <Search className="absolute left-2 top-2.5 w-5 h-5 text-gray-400" />
+          <Input
+            placeholder="Search name, email, admission number, national ID..."
+            className="pl-9"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
-        <div className="header-actions">
-          <div className="search-box">
-            <Search size={18} />
-            <input
-              type="text"
-              placeholder="Search students..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <button className="add-btn" onClick={openAddModal}>
-            <UserPlus size={18} />
-            <span>Add Student</span>
-          </button>
-        </div>
+
+        <Badge variant="outline">Total Students: {filtered.length}</Badge>
       </div>
 
-      {/* Students Table */}
-      <div className="table-container">
-        <table className="modern-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Profile</th>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Institution</th>
-              <th>Course</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredStudents.length > 0 ? (
-              filteredStudents.map((student, index) => (
-                <tr key={student.id}>
-                  <td>{index + 1}</td>
-                  <td>
-                    {student.profileImage ? (
-                      <Image
-                        src={student.profileImage}
-                        alt={student.name}
-                        width={40}
-                        height={40}
-                        className="profile-photo"
-                      />
-                    ) : (
-                      <div className="profile-placeholder">
-                        {student.name.charAt(0)}
+      {/* TABLE */}
+      <Card className="shadow-sm border">
+        <CardHeader>
+          <CardTitle>Student Records</CardTitle>
+        </CardHeader>
+
+        <CardContent>
+          {loading ? (
+            <div className="flex justify-center py-10">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableCell>#</TableCell>
+                  <TableCell>Name</TableCell>
+                  <TableCell>ID Number</TableCell>
+                  <TableCell>Adm No</TableCell>
+                  <TableCell>Institution</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell className="text-right">Actions</TableCell>
+                </TableRow>
+              </TableHeader>
+
+              <TableBody>
+                {filtered.map((s, i) => (
+                  <TableRow key={s.id}>
+                    <TableCell>{i + 1}</TableCell>
+
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={s.avatar || ""} />
+                          <AvatarFallback>{s.full_name.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        {s.full_name}
                       </div>
-                    )}
-                  </td>
-                  <td>{student.name}</td>
-                  <td>{student.email}</td>
-                  <td>{student.institution}</td>
-                  <td>{student.course}</td>
-                  <td>
-                    <span
-                      className={`status-badge ${
-                        student.status === "Active" ? "active" : "suspended"
-                      }`}
-                    >
-                      {student.status}
-                    </span>
-                  </td>
-                  <td className="actions">
-                    <button
-                      className="edit-btn"
-                      onClick={() => openEditModal(student)}
-                    >
-                      <Edit size={16} />
-                    </button>
-                    <button
-                      className="delete-btn"
-                      onClick={() => handleDelete(student.id)}
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={8} className="no-data">
-                  No students found.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+                    </TableCell>
 
-      {/* Add/Edit Modal */}
-      <AnimatePresence>
-        {isModalOpen && (
-          <motion.div
-            className="modal-overlay"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <motion.div
-              className="modal-content"
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-            >
-              <div className="modal-header">
-                <h2>{editingStudent ? "Edit Student" : "Add Student"}</h2>
-                <button onClick={() => setModalOpen(false)}>
-                  <X size={20} />
-                </button>
-              </div>
+                    <TableCell>{s.national_id}</TableCell>
+                    <TableCell>{s.admission_no}</TableCell>
+                    <TableCell>{s.institution}</TableCell>
 
-              <div className="modal-body">
-                {(
-  [
-    { key: "name", label: "Full Name" },
-    { key: "email", label: "Email" },
-    { key: "phone", label: "Phone" },
-    { key: "institution", label: "Institution" },
-    { key: "course", label: "Course" },
-  ] as const
-).map((field) => (
-  <div className="form-group" key={field.key}>
-    <label>{field.label}</label>
-    <input
-      type={field.key === "email" ? "email" : "text"}
-      value={formData[field.key as keyof Student] || ""}
-      onChange={(e) =>
-        setFormData({
-          ...formData,
-          [field.key]: e.target.value,
-        })
-      }
-    />
-  </div>
-))}
+                    <TableCell>
+                      <Badge variant={s.status === "Active" ? "default" : "destructive"}>
+                        {s.status}
+                      </Badge>
+                    </TableCell>
 
+                    <TableCell className="text-right">
+                      <Button size="sm" onClick={() => setSelected(s)}>
+                        <Eye className="w-4 h-4 mr-1" /> View
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
 
-                <div className="form-group">
-                  <label>Status</label>
-                  <select
-                    value={formData.status}
-                    onChange={(e) =>
-                      setFormData({ ...formData, status: e.target.value })
-                    }
-                  >
-                    <option value="Active">Active</option>
-                    <option value="Suspended">Suspended</option>
-                  </select>
+      {/* PROFILE MODAL */}
+      <Dialog open={!!selected} onOpenChange={() => setSelected(null)}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Student Profile</DialogTitle>
+            <DialogDescription>Detailed student information</DialogDescription>
+          </DialogHeader>
+
+          {selected && (
+            <div>
+              {/* HEADER */}
+              <div className="flex items-center gap-4">
+                <Avatar className="h-16 w-16">
+                  <AvatarImage src={selected.avatar || ""} />
+                  <AvatarFallback>{selected.full_name.charAt(0)}</AvatarFallback>
+                </Avatar>
+
+                <div>
+                  <h2 className="text-xl font-semibold">{selected.full_name}</h2>
+                  <p className="text-gray-500">{selected.email}</p>
                 </div>
               </div>
 
-              <div className="modal-footer">
-                <button
-                  className="cancel-btn"
-                  onClick={() => setModalOpen(false)}
-                >
-                  Cancel
-                </button>
-                <button className="save-btn" onClick={handleSave}>
-                  Save
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              <Separator className="my-4" />
+
+              {/* TABS */}
+              <Tabs defaultValue="profile">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="profile">Profile</TabsTrigger>
+                  <TabsTrigger value="academic">Academic</TabsTrigger>
+                  <TabsTrigger value="funding">Funding</TabsTrigger>
+                </TabsList>
+
+                {/* PROFILE */}
+                <TabsContent value="profile">
+                  <h3 className="font-semibold text-lg mb-2">Student Information</h3>
+
+                  <div className="space-y-2">
+                    <p><strong>Phone:</strong> {selected.phone}</p>
+                    <p><strong>Gender:</strong> {selected.gender}</p>
+                    <p><strong>National ID:</strong> {selected.national_id}</p>
+                    <p><strong>Admission No:</strong> {selected.admission_no}</p>
+                    <p><strong>Institution:</strong> {selected.institution}</p>
+                    <p><strong>Course:</strong> {selected.course}</p>
+                    <p><strong>Year of Study:</strong> {selected.year_of_study}</p>
+                    <p><strong>Status:</strong> {selected.status}</p>
+                    <p><strong>Verification:</strong> {selected.verification_status}</p>
+                    <p><strong>Disbursement:</strong> {selected.disbursement_status}</p>
+                  </div>
+
+                  <Separator className="my-4" />
+
+                  {/* ================= ADMIN ACTIONS ================= */}
+                  <h3 className="font-semibold text-lg mt-4 mb-2">Admin Actions</h3>
+
+                  <div className="flex flex-wrap gap-3">
+
+                    <Button disabled={actionLoading} onClick={() => handleAction("verify_student")}>
+                      <Check className="w-4 h-4 mr-2" /> Verify Student
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      disabled={actionLoading}
+                      onClick={() => handleAction("unverify_student")}
+                    >
+                      <X className="w-4 h-4 mr-2" /> Unverify
+                    </Button>
+
+                    <Button disabled={actionLoading} onClick={() => handleAction("approve_funding")}>
+                      <Check className="w-4 h-4 mr-2" /> Approve Funding
+                    </Button>
+
+                    <Button
+                      variant="destructive"
+                      disabled={actionLoading}
+                      onClick={() => handleAction("reject_funding")}
+                    >
+                      <X className="w-4 h-4 mr-2" /> Reject Funding
+                    </Button>
+
+                    <Button disabled={actionLoading} onClick={() => handleAction("activate_account")}>
+                      Activate Account
+                    </Button>
+
+                    <Button
+                      variant="destructive"
+                      disabled={actionLoading}
+                      onClick={() => handleAction("deactivate_account")}
+                    >
+                      <Unlock className="w-4 h-4 mr-2" /> Deactivate Account
+                    </Button>
+
+                    <Button
+                      variant="secondary"
+                      disabled={actionLoading}
+                      onClick={() => handleAction("reset_password")}
+                    >
+                      <Lock className="w-4 h-4 mr-2" /> Reset Password
+                    </Button>
+                  </div>
+                </TabsContent>
+
+                {/* ACADEMIC */}
+                <TabsContent value="academic">
+                  <h3 className="font-semibold text-lg mb-2">Academic History</h3>
+
+                  {selected.academicHistory.length === 0 ? (
+                    <p className="text-gray-500">No academic records available.</p>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableCell>Year</TableCell>
+                          <TableCell>Semester</TableCell>
+                          <TableCell>Remarks</TableCell>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {selected.academicHistory.map((a, i) => (
+                          <TableRow key={i}>
+                            <TableCell>{a.year}</TableCell>
+                            <TableCell>{a.semester}</TableCell>
+                            <TableCell>{a.remarks}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </TabsContent>
+
+                {/* FUNDING */}
+                <TabsContent value="funding">
+                  <h3 className="font-semibold text-lg mb-2">Funding History</h3>
+
+                  {selected.fundingHistory.length === 0 ? (
+                    <p>No records found.</p>
+                  ) : (
+                    selected.fundingHistory.map((f, i) => (
+                      <Card key={i} className="mb-4">
+                        <CardHeader>
+                          <CardTitle className="text-base">
+                            {f.year} — {f.bursary} ({f.status})
+                          </CardTitle>
+                        </CardHeader>
+
+                        <CardContent>
+                          <p>
+                            <strong>Amount Awarded:</strong> KES {f.amount.toLocaleString()}
+                          </p>
+
+                          <Separator className="my-3" />
+
+                          <strong>Disbursements:</strong>
+                          <ul className="mt-2 space-y-1">
+                            {f.disbursements.map((d, i2) => (
+                              <li key={i2}>
+                                {d.date} — KES {d.amount.toLocaleString()} ({d.mode})
+                              </li>
+                            ))}
+                          </ul>
+                        </CardContent>
+                      </Card>
+                    ))
+                  )}
+                </TabsContent>
+              </Tabs>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
-};
-
-export default AdminStudentsPage;
+}

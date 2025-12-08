@@ -125,6 +125,17 @@
   border-bottom: 1px solid rgba(0, 0, 0, 0.1);
 }
 
+.unread-msg {
+  background: #eef6ff;
+  border-left: 4px solid #3b82f6;
+}
+
+.msg-time {
+  font-size: 11px;
+  color: gray;
+  margin-top: 4px;
+}
+
 .dropdown-item {
   padding: 0.7rem 1rem;
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);

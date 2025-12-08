@@ -1,179 +1,345 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Bell, MessageSquare, LogOut, X } from "lucide-react";
+
+import {
+  MessageSquare,
+  Bell,
+  LogOut,
+  X,
+  Trash2,
+  
+} from "lucide-react";
+
 import { motion, AnimatePresence } from "framer-motion";
 import "../styles/header.css";
 
 interface HeaderProps {
-  onLogout?: () => void;
   role?: "admin" | "student";
+  onLogout?: () => void;
 }
 
-export default function Header({ onLogout, role }: HeaderProps) {
+interface NotificationItem {
+  id: number;
+  title: string;
+  message: string;
+  created_at: string;
+  is_read: number;
+  category: string;
+}
+
+interface MessageItem {
+  id: number;
+  sender: string;
+  message: string;
+  created_at: string;
+  is_read: number;
+}
+
+export default function Header({ role, onLogout }: HeaderProps) {
   const router = useRouter();
 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [showMessages, setShowMessages] = useState(false);
-  const [hasUnreadNotifications, setHasUnreadNotifications] = useState(true);
-  const [hasUnreadMessages, setHasUnreadMessages] = useState(true);
+  const [userId, setUserId] = useState<number | null>(null);
 
-  // 🧩 Check if user is logged in
+  const [showMessages, setShowMessages] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+
+  const [messages, setMessages] = useState<MessageItem[]>([]);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+
+  const [unreadMessages, setUnreadMessages] = useState(false);
+  const [unreadNotifications, setUnreadNotifications] = useState(false);
+
+  // ------------------------------
+  // Load logged-in user
+  // ------------------------------
   useEffect(() => {
-    const user = localStorage.getItem("user");
-    setIsLoggedIn(!!user);
+    const stored = localStorage.getItem("user");
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      setUserId(parsed.id);
+      setIsLoggedIn(true);
+    }
   }, []);
 
-  // 🚫 Hide header completely if not logged in
-  if (!isLoggedIn) return null;
+  // ------------------------------
+  // Fetch Messages
+  // ------------------------------
+  const fetchMessages = useCallback(async () => {
+    if (!userId) return;
 
-  const roleLabel =
-    role === "admin" ? "Admin" : role === "student" ? "Student" : "";
+    const endpoint =
+      role === "admin"
+        ? "http://localhost/bursarySystem/api/messages/getAdminMessages.php"
+        : "http://localhost/bursarySystem/api/messages/getStudentMessages.php";
 
-  const notifications = [
-    { id: 1, text: "New bursary application received." },
-    { id: 2, text: "Application approved successfully." },
-    { id: 3, text: "Funds disbursed for Term 2." },
-  ];
+    const res = await fetch(endpoint, {
+      method: "POST",
+      body: JSON.stringify({ user_id: userId }),
+    });
 
-  const messages = [
-    { id: 1, sender: "Bursary Officer", text: "Please upload your ID copy." },
-    { id: 2, sender: "Admin", text: "Application review in progress." },
-  ];
+    const data = await res.json();
+    const list = (data.messages || []) as MessageItem[];
+
+    setMessages(list);
+    setUnreadMessages(list.some((m) => m.is_read === 0));
+  }, [role, userId]);
+
+  // ------------------------------
+  // Fetch Notifications
+  // ------------------------------
+  const fetchNotifications = useCallback(async () => {
+    if (!userId) return;
+
+  const res = await fetch(
+  "http://localhost/bursarySystem/api/notifications/getNotifications.php",
+  {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ role, user_id: userId }),
+  }
+);
+
+
+    const data = await res.json();
+    const list = (data.notifications || []) as NotificationItem[];
+
+    setNotifications(list);
+    setUnreadNotifications(list.some((n) => n.is_read === 0));
+  }, [role, userId]);
+
+  // ------------------------------
+  // Auto-fetch every 10 seconds
+  // ------------------------------
+  useEffect(() => {
+    if (!userId) return;
+
+    fetchMessages();
+    fetchNotifications();
+
+    const interval = setInterval(() => {
+      fetchMessages();
+      fetchNotifications();
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [userId, fetchMessages, fetchNotifications]);
+
+
+  // ------------------------------
+  // Mark ALL notifications as read
+  // ------------------------------
+  const markAllNotificationsRead = async () => {
+    await fetch(
+      "http://localhost/bursarySystem/api/notifications/markAllRead.php",
+      {
+        method: "POST",
+        body: JSON.stringify({ user_id: userId, role }),
+      }
+    );
+
+    const updated = notifications.map((n) => ({ ...n, is_read: 1 }));
+    setNotifications(updated);
+    setUnreadNotifications(false);
+  };
+
+  // ------------------------------
+  // Mark single notification read
+  // ------------------------------
+  const markNotificationRead = async (id: number) => {
+    await fetch(
+      "http://localhost/bursarySystem/api/notifications/markRead.php",
+      {
+        method: "POST",
+        body: JSON.stringify({ id }),
+      }
+    );
+
+    const updated = notifications.map((n) =>
+      n.id === id ? { ...n, is_read: 1 } : n
+    );
+    setNotifications(updated);
+    setUnreadNotifications(updated.some((n) => n.is_read === 0));
+  };
+
+  // ------------------------------
+  // Clear all notifications
+  // ------------------------------
+  const clearNotifications = async () => {
+    if (!confirm("Clear all notifications?")) return;
+
+    await fetch(
+      "http://localhost/bursarySystem/api/notifications/clearAll.php",
+      {
+        method: "POST",
+        body: JSON.stringify({ user_id: userId, role }),
+      }
+    );
+
+    setNotifications([]);
+    setUnreadNotifications(false);
+  };
+
+  // ------------------------------
+  // UI Handlers
+  // ------------------------------
+  const toggleNotifications = () => {
+    const opening = !showNotifications;
+    setShowNotifications(opening);
+    setShowMessages(false);
+
+    if (opening) markAllNotificationsRead();
+  };
+
+  const toggleMessages = () => {
+    const opening = !showMessages;
+    setShowMessages(opening);
+    setShowNotifications(false);
+
+    if (opening) {
+      // mark messages read only when panel opens
+    }
+  };
 
   const handleLogout = () => {
     if (confirm("Are you sure you want to log out?")) {
       localStorage.removeItem("user");
       setIsLoggedIn(false);
       onLogout?.();
-      router.push("/"); // ✅ Redirect to login page
+      router.push("/");
     }
   };
 
-  const handleOpenNotifications = () => {
-    setShowNotifications(!showNotifications);
-    setShowMessages(false);
-    if (!showNotifications) setHasUnreadNotifications(false);
-  };
-
-  const handleOpenMessages = () => {
-    setShowMessages(!showMessages);
-    setShowNotifications(false);
-    if (!showMessages) setHasUnreadMessages(false);
-  };
+  const roleLabel =
+    role === "admin" ? "Admin" : role === "student" ? "Student" : "";
 
   return (
-    <header className="dashboard-header">
-      <div className="header-left">
-        <div className="header-logo-text">
-          <Image
-            src="/cdflogo.jpg"
-            alt="NGCDF Logo"
-            width={80}
-            height={80}
-            className="header-logo"
-          />
-          <h2 className="header-title">
-            Mbooni NG-CDF Bursary Management System{" "}
-            {roleLabel && <span className="role-label">({roleLabel})</span>}
-          </h2>
-        </div>
-      </div>
+    <>
+      {isLoggedIn && (
+        <header className="dashboard-header">
+          <div className="header-left">
+            <Image
+              src="/cdflogo.jpg"
+              alt="NGCDF Logo"
+              width={80}
+              height={80}
+              className="header-logo"
+            />
+            <h2 className="header-title">
+              Mbooni NG-CDF Bursary Management System{" "}
+              {roleLabel && <span className="role-label">({roleLabel})</span>}
+            </h2>
+          </div>
 
-      <div className="header-right">
-        {/* 🔔 Notifications */}
-        <div className="relative">
-          <button
-            className="icon-btn"
-            title="Notifications"
-            onClick={handleOpenNotifications}
-          >
-            <Bell size={20} />
-            {hasUnreadNotifications && <span className="red-dot"></span>}
-          </button>
+          <div className="header-right">
 
-          <AnimatePresence>
-            {showNotifications && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="dropdown-panel"
-              >
-                <div className="dropdown-header">
-                  Notifications
-                  <button
-                    onClick={() => setShowNotifications(false)}
-                    className="close-btn"
+            {/* 🔔 NOTIFICATIONS ICON */}
+            <div className="relative">
+              <button className="icon-btn" onClick={toggleNotifications}>
+                <Bell size={20} />
+                {unreadNotifications && <span className="red-dot"></span>}
+              </button>
+
+              <AnimatePresence>
+                {showNotifications && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="dropdown-panel"
                   >
-                    <X size={16} />
-                  </button>
-                </div>
-                {notifications.length > 0 ? (
-                  notifications.map((note) => (
-                    <div key={note.id} className="dropdown-item">
-                      {note.text}
+                    <div className="dropdown-header">
+                      Notifications
+                      <div className="actions">
+                        <button onClick={clearNotifications}>
+                          <Trash2 size={16} />
+                        </button>
+                        <button onClick={() => setShowNotifications(false)}>
+                          <X size={16} />
+                        </button>
+                      </div>
                     </div>
-                  ))
-                ) : (
-                  <div className="dropdown-empty">No new notifications</div>
+
+                    {notifications.length > 0 ? (
+                      notifications.map((note) => (
+                        <div
+                          key={note.id}
+                          onClick={() => markNotificationRead(note.id)}
+                          className={`dropdown-item ${
+                            note.is_read === 0 ? "unread-msg" : ""
+                          }`}
+                        >
+                          <strong>{note.title}</strong>
+                          <p>{note.message}</p>
+                          <div className="msg-time">{note.created_at}</div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="dropdown-empty">No notifications</div>
+                    )}
+                  </motion.div>
                 )}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+              </AnimatePresence>
+            </div>
 
-        {/* 💬 Messages */}
-        <div className="relative">
-          <button
-            className="icon-btn"
-            title="Messages"
-            onClick={handleOpenMessages}
-          >
-            <MessageSquare size={20} />
-            {hasUnreadMessages && <span className="red-dot"></span>}
-          </button>
+            {/* 💬 MESSAGE ICON — unchanged */}
+            <div className="relative">
+              <button className="icon-btn" onClick={toggleMessages}>
+                <MessageSquare size={20} />
+                {unreadMessages && <span className="red-dot"></span>}
+              </button>
 
-          <AnimatePresence>
-            {showMessages && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="dropdown-panel"
-              >
-                <div className="dropdown-header">
-                  Messages
-                  <button
-                    onClick={() => setShowMessages(false)}
-                    className="close-btn"
+              <AnimatePresence>
+                {showMessages && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="dropdown-panel"
                   >
-                    <X size={16} />
-                  </button>
-                </div>
-                {messages.length > 0 ? (
-                  messages.map((msg) => (
-                    <div key={msg.id} className="dropdown-item">
-                      <strong>{msg.sender}: </strong> {msg.text}
+                    <div className="dropdown-header">
+                      Messages
+                      <button
+                        onClick={() => setShowMessages(false)}
+                        className="close-btn"
+                      >
+                        <X size={16} />
+                      </button>
                     </div>
-                  ))
-                ) : (
-                  <div className="dropdown-empty">No new messages</div>
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
 
-        {/* 🚪 Logout */}
-        <button className="logout-btn" onClick={handleLogout}>
-          <LogOut size={20} />
-          <span>Logout</span>
-        </button>
-      </div>
-    </header>
+                    {messages.length > 0 ? (
+                      messages.map((msg) => (
+                        <div
+                          key={msg.id}
+                          className={`dropdown-item ${
+                            msg.is_read === 0 ? "unread-msg" : ""
+                          }`}
+                        >
+                          <strong>{msg.sender}: </strong> {msg.message}
+                          <div className="msg-time">{msg.created_at}</div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="dropdown-empty">No messages</div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* 🚪 Logout */}
+            <button className="logout-btn" onClick={handleLogout}>
+              <LogOut size={20} />
+              <span>Logout</span>
+            </button>
+          </div>
+        </header>
+      )}
+    </>
   );
 }

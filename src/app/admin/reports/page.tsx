@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import * as XLSX from "xlsx";
 import {
   Card,
@@ -20,31 +20,53 @@ import {
 } from "recharts";
 import { Download, TrendingUp, FileText } from "lucide-react";
 
-// Annual disbursement data (fee only)
-const disbursementData = [
-  { year: "2021", amount: 2100000 },
-  { year: "2022", amount: 2600000 },
-  { year: "2023", amount: 3100000 },
-  { year: "2024", amount: 3450000 },
-  { year: "2025", amount: 3900000 },
-];
+interface ReportRow {
+  academic_year: string;
+  beneficiaries: number;
+  amount: number;
+  status: string;
+}
 
-// Table data for Excel and display
-const reportTable = [
-  { year: "2025", beneficiaries: 1030, amount: 3900000, status: "Ongoing" },
-  { year: "2024", beneficiaries: 950, amount: 3450000, status: "Completed" },
-  { year: "2023", beneficiaries: 890, amount: 3100000, status: "Completed" },
-  { year: "2022", beneficiaries: 820, amount: 2600000, status: "Completed" },
-];
+interface DashboardStats {
+  total_disbursed_2025: number;
+  applicants_2025: number;
+  approved_beneficiaries: number;
+}
 
 export default function ReportsPage() {
-  // Export function
+  const [chartData, setChartData] = useState([]);
+  const [reportTable, setReportTable] = useState<ReportRow[]>([]);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch backend report data
+  useEffect(() => {
+    const loadReports = async () => {
+      try {
+        const res = await fetch("http://localhost/BursarySystem/api/report.php");
+        const data = await res.json();
+
+        setChartData(data.chartData);
+        setReportTable(data.reportTable);
+        setStats(data.stats);
+      } catch (error) {
+        console.error("Error loading report:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadReports();
+  }, []);
+
   const handleExportToExcel = () => {
     const worksheet = XLSX.utils.json_to_sheet(reportTable);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Disbursement Report");
     XLSX.writeFile(workbook, "Bursary_Disbursement_Report.xlsx");
   };
+
+  if (loading) return <p className="p-6 text-gray-600">Loading reports...</p>;
 
   return (
     <div className="p-6 space-y-6">
@@ -71,10 +93,10 @@ export default function ReportsPage() {
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-semibold text-gray-900">
-              Ksh 3,900,000
+              Ksh {stats?.total_disbursed_2025.toLocaleString()}
             </p>
             <p className="text-sm text-gray-500 mt-1">
-              +15% from last academic year
+              Based on database records
             </p>
           </CardContent>
         </Card>
@@ -85,10 +107,10 @@ export default function ReportsPage() {
             <FileText className="text-yellow-500" />
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-semibold text-gray-900">1,245</p>
-            <p className="text-sm text-gray-500 mt-1">
-              +9% compared to last year
+            <p className="text-3xl font-semibold text-gray-900">
+              {stats?.applicants_2025.toLocaleString()}
             </p>
+            <p className="text-sm text-gray-500 mt-1">Total submissions</p>
           </CardContent>
         </Card>
 
@@ -98,53 +120,47 @@ export default function ReportsPage() {
             <TrendingUp className="text-green-500" />
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-semibold text-gray-900">1,030</p>
+            <p className="text-3xl font-semibold text-gray-900">
+              {stats?.approved_beneficiaries.toLocaleString()}
+            </p>
             <p className="text-sm text-gray-500 mt-1">
-              83% approval rate this year
+              Verified and approved
             </p>
           </CardContent>
         </Card>
       </div>
 
       {/* Bar Chart */}
-  <Card className="shadow-md border border-gray-100">
-  <CardHeader>
-    <CardTitle>Annual Fee Disbursement Overview (by Year)</CardTitle>
-  </CardHeader>
-  <CardContent>
-    <div className="w-full h-[22rem] md:h-[26rem] lg:h-[30rem]">
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart
-          data={disbursementData}
-          margin={{ top: 20, right: 30, left: 60, bottom: 20 }}
-        >
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="year" tick={{ fontSize: 12 }} />
-          <YAxis
-            tickFormatter={(value) => `Ksh ${(value / 1000000).toFixed(1)}M`}
-            tick={{ fontSize: 12 }}
-          />
-          <Tooltip formatter={(value: number) => `Ksh ${value.toLocaleString()}`} />
-          <Legend wrapperStyle={{ fontSize: 12 }} />
-          <Bar
-            dataKey="amount"
-            fill="#2563eb"
-            radius={[8, 8, 0, 0]}
-            name="Total Disbursed (Ksh)"
-            isAnimationActive={true}
-            animationBegin={200}
-            animationDuration={1500}
-            animationEasing="ease-out"
-          />
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
-  </CardContent>
-</Card>
+      <Card className="shadow-md border border-gray-100">
+        <CardHeader>
+          <CardTitle>Annual Fee Disbursement Overview (by Year)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="w-full h-88 md:h-104 lg:h-120">
 
- 
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} margin={{ top: 20, right: 30, left: 60, bottom: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="year" tick={{ fontSize: 12 }} />
+                <YAxis
+                  tickFormatter={(value) => `Ksh ${(value / 1000000).toFixed(1)}M`}
+                  tick={{ fontSize: 12 }}
+                />
+                <Tooltip formatter={(value: number) => `Ksh ${value.toLocaleString()}`} />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <Bar
+                  dataKey="amount"
+                  fill="#2563eb"
+                  radius={[8, 8, 0, 0]}
+                  name="Total Disbursed (Ksh)"
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* Reports Table */}
+      {/* Report Table */}
       <Card className="shadow-md border border-gray-100">
         <CardHeader>
           <CardTitle>Annual Disbursement Reports</CardTitle>
@@ -154,31 +170,27 @@ export default function ReportsPage() {
             <thead>
               <tr className="bg-gray-50 text-gray-600">
                 <th className="text-left px-4 py-3 border-b">Academic Year</th>
-                <th className="text-left px-4 py-3 border-b">
-                  Total Beneficiaries
-                </th>
+                <th className="text-left px-4 py-3 border-b">Total Beneficiaries</th>
                 <th className="text-left px-4 py-3 border-b">Total Disbursed</th>
                 <th className="text-left px-4 py-3 border-b">Status</th>
               </tr>
             </thead>
             <tbody>
-              {reportTable.map((report, idx) => (
+              {reportTable.map((row, idx) => (
                 <tr key={idx} className="hover:bg-gray-50 transition">
-                  <td className="px-4 py-3 border-b">{report.year}</td>
-                  <td className="px-4 py-3 border-b">
-                    {report.beneficiaries.toLocaleString()}
-                  </td>
+                  <td className="px-4 py-3 border-b">{row.academic_year}</td>
+                  <td className="px-4 py-3 border-b">{row.beneficiaries.toLocaleString()}</td>
                   <td className="px-4 py-3 border-b font-medium">
-                    Ksh {report.amount.toLocaleString()}
+                    Ksh {row.amount.toLocaleString()}
                   </td>
                   <td
                     className={`px-4 py-3 border-b ${
-                      report.status === "Completed"
+                      row.status === "Completed"
                         ? "text-green-600 font-semibold"
                         : "text-blue-600 font-semibold"
                     }`}
                   >
-                    {report.status}
+                    {row.status}
                   </td>
                 </tr>
               ))}

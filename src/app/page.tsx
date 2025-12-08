@@ -20,77 +20,82 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  // ✅ Handle input changes
+  // Handle input changes
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // ✅ Handle login submission
+  // Handle login submission
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setLoading(true);
-  setError("");
-  setSuccess("");
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    setSuccess("");
 
-  try {
-    const response = await fetch("http://localhost/bursarySystem/api/login.php", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        identifier: formData.identifier.trim(),
-        password: formData.password.trim(),
-      }),
-    });
+    try {
+      const response = await fetch("http://localhost/bursarySystem/api/login.php", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          identifier: formData.identifier.trim(),
+          password: formData.password.trim(),
+        }),
+      });
 
-    const text = await response.text(); // <-- debug line
-    console.log("Raw PHP response:", text); // see what PHP returns
+      const text = await response.text();
+      console.log("Raw PHP response:", text);
 
-    const data = JSON.parse(text);
+      // ⭐ SAFE JSON PARSER
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        return setError("Invalid server response.");
+      }
 
-    if (data.success) {
-      setSuccess(data.message);
-      
-// Save user info
-localStorage.setItem("user", JSON.stringify(data.user));
-localStorage.setItem("isLoggedIn", "true");
+      if (data.success) {
+        setSuccess(data.message);
 
-// Normalize ID (support id OR user_id)
-const userId = data.user.id || data.user.user_id;
+        // Save user info
+        localStorage.setItem("user", JSON.stringify(data.user));
+        localStorage.setItem("isLoggedIn", "true");
 
-// 🔥 Save student ID
-if (data.user.role === "student") {
-  localStorage.setItem("student_id", userId);
-}
+        // Normalize ID
+        const userId = data.user.id || data.user.user_id;
 
-// 🔥 Save admin ID
-if (data.user.role === "admin") {
-  localStorage.setItem("admin_id", userId);
-}
-
-
-      setTimeout(() => {
-        if (data.user.role === "admin") {
-          window.location.href = "/admin";
-        } else {
-          window.location.href = "/student";
+        // Save student ID
+        if (data.user.role === "student") {
+          localStorage.setItem("student_id", userId);
         }
-      }, 1500);
-    } else {
-      setError(data.message);
+
+        // Save admin ID
+        if (data.user.role === "admin") {
+          localStorage.setItem("admin_id", userId);
+        }
+
+        setTimeout(() => {
+          if (data.user.role === "admin") {
+            window.location.href = "/admin";
+          } else {
+            window.location.href = "/student";
+          }
+        }, 1500);
+      } else {
+        setError(data.message);
+      }
+    } catch (err) {
+      console.error("Login error:", err);
+      setError("Server error. Please try again later.");
+    } finally {
+      setLoading(false);
     }
-  } catch (err) {
-    console.error("Login error:", err);
-    setError("Server error. Please try again later.");
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   return (
     <div className="relative w-full h-screen overflow-hidden">
-      {/* === Background === */}
+      {/* Background */}
       <div className="absolute inset-0">
         <Image
           src="/cd.jpg"
@@ -102,7 +107,7 @@ if (data.user.role === "admin") {
         <div className="absolute inset-0 bg-black/40" />
       </div>
 
-      {/* === Centered Success / Error Card === */}
+      {/* Success / Error Modal */}
       {(success || error) && (
         <div className="absolute inset-0 flex items-center justify-center z-20 bg-black/40 backdrop-blur-sm transition-all duration-300">
           <div
@@ -128,7 +133,7 @@ if (data.user.role === "admin") {
         </div>
       )}
 
-      {/* === Login Form === */}
+      {/* Login Form */}
       <div className="relative z-10 flex justify-end items-center h-full">
         <div className="bg-white/95 backdrop-blur-md p-8 rounded-l-2xl shadow-2xl w-full max-w-md mr-12">
           <div className="text-center mb-6">
@@ -149,7 +154,7 @@ if (data.user.role === "admin") {
 
           <form className="space-y-5" onSubmit={handleSubmit}>
             <div>
-              <label className="block text-la font-bold text-gray-700">
+              <label className="block text-sm font-bold text-gray-700">
                 Email / Admission Number
               </label>
               <input
@@ -165,7 +170,7 @@ if (data.user.role === "admin") {
 
             <div className="relative">
               <div className="flex justify-between items-center">
-                <label className="block text-la font-bold text-gray-700">
+                <label className="block text-sm font-bold text-gray-700">
                   Password
                 </label>
                 <Link
@@ -185,6 +190,7 @@ if (data.user.role === "admin") {
                 required
                 className="w-full mt-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
               />
+
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
@@ -199,7 +205,11 @@ if (data.user.role === "admin") {
               className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg transition-all"
               disabled={loading}
             >
-              {loading ? "Authenticating..." : (<><LogIn size={18} /> Login</>)}
+              {loading ? "Authenticating..." : (
+                <>
+                  <LogIn size={18} /> Login
+                </>
+              )}
             </button>
           </form>
 

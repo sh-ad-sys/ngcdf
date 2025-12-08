@@ -1,230 +1,500 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Search, CheckCircle, XCircle, Eye, Filter } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import Image from "next/image";
-import "../../../styles/applications.css";
+import React, { useEffect, useMemo, useState } from "react";
+import { Transition } from "@headlessui/react";
+import { Download, Search, Filter, Eye } from "lucide-react";
 
-interface Application {
+/* ---------------------------
+   Types
+--------------------------- */
+type Status = "Pending" | "Reviewed" | "Approved" | "Rejected";
+type Level = "Secondary" | "Tertiary" | "Other";
+
+export type Application = {
   id: number;
   name: string;
-  applicantId: string;
-  course: string;
+  admissionNo: string;
   institution: string;
-  amountRequested: number;
-  status: "Pending" | "Approved" | "Rejected";
-  dateApplied: string;
-  profilePic?: string;
-}
+  level: Level;
+  status: Status;
+  submittedAt: string;
+  amountRequested?: number;
+  ward?: string;
+  constituency?: string;
+  notes?: string;
+};
 
+/** Backend API structure */
+type BackendApplication = {
+  id: number;
+  fullName: string;
+  admissionNo: string;
+  institution: string;
+  academicLevel: Level;
+  status: Status;
+  submittedAt: string;
+  amountRequested?: number;
+  ward?: string;
+  constituency?: string;
+  reason?: string;
+};
+
+type BackendResponse = {
+  applications: BackendApplication[];
+  stats: {
+    total: number;
+    pending: number;
+    approved: number;
+    reviewed: number;
+    rejected: number;
+  };
+};
+
+/* ---------------------------
+   Main Component
+--------------------------- */
 export default function ApplicationsPage() {
-  const [applications, setApplications] = useState<Application[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState("All");
-  const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
-
-  // Simulated data fetch
-  useEffect(() => {
-    setApplications([
-      {
-        id: 1,
-        name: "Jane Muthoni",
-        applicantId: "CDF2025-001",
-        course: "Bachelor of Education",
-        institution: "University of Nairobi",
-        amountRequested: 25000,
-        status: "Pending",
-        dateApplied: "2025-09-15",
-        profilePic: "/images/student1.jpg",
-      },
-      {
-        id: 2,
-        name: "John Mwangi",
-        applicantId: "CDF2025-002",
-        course: "Diploma in Business Management",
-        institution: "Kenyatta University",
-        amountRequested: 18000,
-        status: "Approved",
-        dateApplied: "2025-09-10",
-        profilePic: "/images/student2.jpg",
-      },
-      {
-        id: 3,
-        name: "Faith Njeri",
-        applicantId: "CDF2025-003",
-        course: "BSc Computer Science",
-        institution: "Jomo Kenyatta University",
-        amountRequested: 30000,
-        status: "Rejected",
-        dateApplied: "2025-09-11",
-        profilePic: "/images/student3.jpg",
-      },
-    ]);
-  }, []);
-
-  // Filtered applications
-  const filteredApps = applications.filter((app) => {
-    const matchesSearch =
-      app.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      app.applicantId.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === "All" || app.status === filterStatus;
-    return matchesSearch && matchesStatus;
+  const [data, setData] = useState<Application[]>([]);
+  const [stats, setStats] = useState({
+    total: 0,
+    pending: 0,
+    approved: 0,
+    reviewed: 0,
+    rejected: 0,
   });
 
-  // Handle Approve / Reject
-  const handleStatusChange = (id: number, newStatus: "Approved" | "Rejected") => {
-    setApplications((prev) =>
-      prev.map((app) => (app.id === id ? { ...app, status: newStatus } : app))
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<Status | "All">("All");
+  const [levelFilter, setLevelFilter] = useState<Level | "All">("All");
+  const [yearFilter, setYearFilter] = useState<string | "All">("All");
+
+  const [page, setPage] = useState(1);
+  const pageSize = 8;
+
+  const [openApp, setOpenApp] = useState<Application | null>(null);
+
+  /* ---------------------------
+     Fetch Applications
+  --------------------------- */
+  useEffect(() => {
+    (async () => {
+      try {
+        const params = new URLSearchParams({
+          status: statusFilter,
+          level: levelFilter,
+          year: yearFilter,
+          search,
+        });
+
+        const res = await fetch(
+          `http://localhost/bursarySystem/api/adminapplications.php?${params.toString()}`
+        );
+
+        const json: BackendResponse = await res.json();
+
+        // Map backend structure into front-end Application type
+        const mapped: Application[] = json.applications.map((a) => ({
+          id: a.id,
+          name: a.fullName,
+          admissionNo: a.admissionNo,
+          institution: a.institution,
+          level: a.academicLevel,
+          status: a.status,
+          submittedAt: a.submittedAt,
+          amountRequested: a.amountRequested,
+          ward: a.ward,
+          constituency: a.constituency,
+          notes: a.reason ?? "",
+        }));
+
+        setData(mapped);
+        setStats(json.stats);
+        setPage(1);
+      } catch (err) {
+        console.error("Failed to fetch applications:", err);
+      }
+    })();
+  }, [statusFilter, levelFilter, yearFilter, search]);
+
+  /* ---------------------------
+     Derived Data
+  --------------------------- */
+  const years = useMemo(() => {
+    const yrs = Array.from(
+      new Set(
+        data.map((d) =>
+          new Date(d.submittedAt).getFullYear().toString()
+        )
+      )
     );
+    return ["All", ...yrs];
+  }, [data]);
+
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase();
+
+    return data.filter((d) => {
+      if (statusFilter !== "All" && d.status !== statusFilter) return false;
+      if (levelFilter !== "All" && d.level !== levelFilter) return false;
+      if (
+        yearFilter !== "All" &&
+        new Date(d.submittedAt).getFullYear().toString() !== yearFilter
+      )
+        return false;
+
+      return (
+        d.name.toLowerCase().includes(q) ||
+        d.admissionNo.toLowerCase().includes(q) ||
+        d.institution.toLowerCase().includes(q)
+      );
+    });
+  }, [data, search, statusFilter, levelFilter, yearFilter]);
+
+  const totalPages = Math.ceil(filtered.length / pageSize);
+  const pageData = filtered.slice((page - 1) * pageSize, page * pageSize);
+
+  /* ---------------------------
+     Helpers
+  --------------------------- */
+  const formatDate = (iso?: string) =>
+    iso ? new Date(iso).toLocaleString() : "-";
+
+  const statusColor = (s: Status) =>
+    s === "Approved"
+      ? "bg-green-100 text-green-800"
+      : s === "Pending"
+      ? "bg-yellow-100 text-yellow-800"
+      : s === "Reviewed"
+      ? "bg-blue-100 text-blue-800"
+      : "bg-red-100 text-red-800";
+
+  const exportToCSV = (items: Application[]) => {
+    const headers = [
+      "ID",
+      "Name",
+      "AdmissionNo",
+      "Institution",
+      "Level",
+      "Status",
+      "SubmittedAt",
+      "AmountRequested",
+      "Ward",
+      "Constituency",
+      "Notes",
+    ];
+    const rows = items.map((r) =>
+      [
+        r.id,
+        r.name,
+        r.admissionNo,
+        r.institution,
+        r.level,
+        r.status,
+        r.submittedAt,
+        r.amountRequested ?? "",
+        r.ward ?? "",
+        r.constituency ?? "",
+        (r.notes ?? "").replace(/\n/g, " "),
+      ].join(",")
+    );
+    const csv = [headers.join(","), ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `applications_${new Date()
+      .toISOString()
+      .slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
+  /* ---------------------------
+     JSX
+  --------------------------- */
   return (
-    <div className="applications-container">
-      {/* Header */}
-      <div className="applications-header">
-        <h1>Applications</h1>
-        <p>Manage and review all bursary applications.</p>
+    <div className="max-w-7xl mx-auto p-6">
+      {/* HEADER */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-800">Applications</h1>
+          <p className="text-sm text-slate-500">
+            Review and manage bursary applications.
+          </p>
+        </div>
+        <button
+          onClick={() => exportToCSV(filtered)}
+          className="flex items-center gap-2 bg-white border px-3 py-2 rounded-md shadow-sm hover:bg-slate-50"
+        >
+          <Download className="w-4 h-4" />
+          Export CSV
+        </button>
       </div>
 
-      {/* Controls */}
-      <div className="applications-controls">
-        <div className="search-bar">
-          <Search size={18} />
+      {/* STATS */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
+        <div className="p-4 bg-white shadow-sm border rounded-lg">
+          <p className="text-sm text-slate-500">Total Applications</p>
+          <p className="text-2xl font-semibold">{stats.total}</p>
+        </div>
+        <div className="p-4 bg-white shadow-sm border rounded-lg">
+          <p className="text-sm text-slate-500">Pending</p>
+          <p className="text-2xl font-semibold">{stats.pending}</p>
+        </div>
+        <div className="p-4 bg-white shadow-sm border rounded-lg">
+          <p className="text-sm text-slate-500">Approved</p>
+          <p className="text-2xl font-semibold">{stats.approved}</p>
+        </div>
+      </div>
+
+      {/* SEARCH + FILTERS */}
+      <div className="flex flex-col lg:flex-row gap-3 mt-6">
+        <div className="relative w-full lg:w-72">
+          <Search className="absolute left-3 top-3 text-slate-400" />
           <input
-            type="text"
-            placeholder="Search by name or ID..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by name, admission number..."
+            className="pl-10 pr-3 py-2 w-full border rounded-lg"
           />
         </div>
 
-        <div className="filter-dropdown">
-          <Filter size={18} />
-          <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
-            <option value="All">All Status</option>
-            <option value="Pending">Pending</option>
-            <option value="Approved">Approved</option>
-            <option value="Rejected">Rejected</option>
-          </select>
+        <select
+          value={statusFilter}
+          onChange={(e) =>
+            setStatusFilter(e.target.value as Status | "All")
+          }
+          className="px-3 py-2 border rounded-lg"
+        >
+          <option value="All">All Statuses</option>
+          <option value="Pending">Pending</option>
+          <option value="Reviewed">Reviewed</option>
+          <option value="Approved">Approved</option>
+          <option value="Rejected">Rejected</option>
+        </select>
+
+        <select
+          value={levelFilter}
+          onChange={(e) =>
+            setLevelFilter(e.target.value as Level | "All")
+          }
+          className="px-3 py-2 border rounded-lg"
+        >
+          <option value="All">All Levels</option>
+          <option value="Secondary">Secondary</option>
+          <option value="Tertiary">Tertiary</option>
+          <option value="Other">Other</option>
+        </select>
+
+        <select
+          value={yearFilter}
+          onChange={(e) => setYearFilter(e.target.value)}
+          className="px-3 py-2 border rounded-lg"
+        >
+          {years.map((y) => (
+            <option key={y} value={y}>
+              {y}
+            </option>
+          ))}
+        </select>
+
+        <button
+          onClick={() => {
+            setSearch("");
+            setStatusFilter("All");
+            setLevelFilter("All");
+            setYearFilter("All");
+          }}
+          className="px-3 py-2 border rounded-lg bg-white"
+        >
+          <Filter className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* TABLE */}
+      <div className="mt-6 bg-white border rounded-lg shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y">
+            <thead className="bg-slate-50">
+              <tr>
+                <th className="px-4 py-3 text-left">Applicant</th>
+                <th className="px-4 py-3 text-left">Institution</th>
+                <th className="px-4 py-3 text-left">Level</th>
+                <th className="px-4 py-3 text-left">Status</th>
+                <th className="px-4 py-3 text-left">Submitted</th>
+                <th className="px-4 py-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {pageData.map((row) => (
+                <tr key={row.id} className="hover:bg-slate-50">
+                  <td className="px-4 py-3">
+                    <div className="font-medium">{row.name}</div>
+                    <div className="text-xs text-slate-500">
+                      {row.admissionNo}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">{row.institution}</td>
+                  <td className="px-4 py-3">{row.level}</td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${statusColor(
+                        row.status
+                      )}`}
+                    >
+                      {row.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">{formatDate(row.submittedAt)}</td>
+                  <td className="px-4 py-3 text-right">
+                    <button
+                      onClick={() => setOpenApp(row)}
+                      className="flex items-center gap-2 border px-3 py-1 rounded-md"
+                    >
+                      <Eye className="w-4 h-4" /> View
+                    </button>
+                  </td>
+                </tr>
+              ))}
+
+              {pageData.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={6}
+                    className="px-4 py-8 text-center text-slate-500"
+                  >
+                    No applications found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* PAGINATION */}
+        <div className="px-4 py-3 flex justify-between bg-slate-50">
+          <p className="text-sm">
+            Showing <b>{(page - 1) * pageSize + 1}</b> to{" "}
+            <b>{Math.min(page * pageSize, filtered.length)}</b> of{" "}
+            <b>{filtered.length}</b>
+          </p>
+
+          <div className="flex items-center gap-2">
+            <button
+              disabled={page === 1}
+              onClick={() => setPage(page - 1)}
+              className="px-3 py-1 border rounded bg-white"
+            >
+              Prev
+            </button>
+
+            <div className="px-3 py-1 border rounded bg-white">
+              Page {page}
+            </div>
+
+            <button
+              disabled={page === totalPages}
+              onClick={() => setPage(page + 1)}
+              className="px-3 py-1 border rounded bg-white"
+            >
+              Next
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Applications Table */}
-      <div className="applications-table">
-        <table>
-          <thead>
-            <tr>
-              <th>Applicant</th>
-              <th>Applicant ID</th>
-              <th>Course</th>
-              <th>Institution</th>
-              <th>Amount (Ksh)</th>
-              <th>Status</th>
-              <th>Date Applied</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredApps.map((app) => (
-              <motion.tr
-                key={app.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2 }}
-              >
-                <td className="applicant-info">
-                  <div className="profile-pic">
-                    <Image
-                      src={app.profilePic || "/images/default-avatar.png"}
-                      alt={app.name}
-                      width={40}
-                      height={40}
-                      className="rounded-full object-cover"
-                    />
-                  </div>
-                  <span>{app.name}</span>
-                </td>
-                <td>{app.applicantId}</td>
-                <td>{app.course}</td>
-                <td>{app.institution}</td>
-                <td>{app.amountRequested.toLocaleString()}</td>
-                <td>
-                  <span className={`status ${app.status.toLowerCase()}`}>{app.status}</span>
-                </td>
-                <td>{app.dateApplied}</td>
-                <td className="actions">
-                  <button
-                    className="view-btn"
-                    onClick={() => setSelectedApplication(app)}
-                    title="View Details"
-                  >
-                    <Eye size={18} />
-                  </button>
-                  {app.status === "Pending" && (
-                    <>
-                      <button
-                        className="approve-btn"
-                        onClick={() => handleStatusChange(app.id, "Approved")}
-                        title="Approve"
-                      >
-                        <CheckCircle size={18} />
-                      </button>
-                      <button
-                        className="reject-btn"
-                        onClick={() => handleStatusChange(app.id, "Rejected")}
-                        title="Reject"
-                      >
-                        <XCircle size={18} />
-                      </button>
-                    </>
-                  )}
-                </td>
-              </motion.tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Application Detail Modal */}
-      <AnimatePresence>
-        {selectedApplication && (
-          <motion.div
-            className="modal-overlay"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+      {/* MODAL */}
+      <Transition show={!!openApp}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <Transition.Child
+            enter="duration-200"
+            enterFrom="opacity-0"
+            enterTo="opacity-60"
+            leave="duration-150"
+            leaveFrom="opacity-60"
+            leaveTo="opacity-0"
           >
-            <motion.div
-              className="modal-content"
-              initial={{ scale: 0.9 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.9 }}
-            >
-              <h2>Application Details</h2>
-              <div className="modal-body">
-                <Image
-                  src={selectedApplication.profilePic || "/images/default-avatar.png"}
-                  alt={selectedApplication.name}
-                  width={80}
-                  height={80}
-                  className="rounded-full mx-auto"
-                />
-                <h3>{selectedApplication.name}</h3>
-                <p><strong>ID:</strong> {selectedApplication.applicantId}</p>
-                <p><strong>Course:</strong> {selectedApplication.course}</p>
-                <p><strong>Institution:</strong> {selectedApplication.institution}</p>
-                <p><strong>Amount Requested:</strong> Ksh {selectedApplication.amountRequested.toLocaleString()}</p>
-                <p><strong>Status:</strong> {selectedApplication.status}</p>
-                <p><strong>Date Applied:</strong> {selectedApplication.dateApplied}</p>
+            <div
+              className="absolute inset-0 bg-black opacity-60"
+              onClick={() => setOpenApp(null)}
+            />
+          </Transition.Child>
+
+          <Transition.Child
+            enter="duration-200"
+            enterFrom="opacity-0 translate-y-4"
+            enterTo="opacity-100 translate-y-0"
+            leave="duration-150"
+            leaveFrom="opacity-100 translate-y-0"
+            leaveTo="opacity-0 translate-y-4"
+          >
+            <div className="relative bg-white max-w-2xl w-full rounded-lg shadow-xl p-6">
+              <div className="flex justify-between">
+                <div>
+                  <h2 className="text-xl font-bold">{openApp?.name}</h2>
+                  <p className="text-sm text-slate-500">
+                    {openApp?.admissionNo}
+                  </p>
+                </div>
+
+                <span
+                  className={`px-3 py-1 rounded text-sm font-semibold ${
+                    openApp ? statusColor(openApp.status) : ""
+                  }`}
+                >
+                  {openApp?.status}
+                </span>
               </div>
-              <div className="modal-actions">
-                <button onClick={() => setSelectedApplication(null)}>Close</button>
+
+              <div className="grid grid-cols-2 gap-4 mt-4">
+                <div>
+                  <p className="text-sm text-slate-500">Institution</p>
+                  <p className="font-medium">{openApp?.institution}</p>
+                </div>
+
+                <div>
+                  <p className="text-sm text-slate-500">Level</p>
+                  <p className="font-medium">{openApp?.level}</p>
+                </div>
+
+                <div>
+                  <p className="text-sm text-slate-500">Submitted</p>
+                  <p className="font-medium">
+                    {formatDate(openApp?.submittedAt)}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-sm text-slate-500">Amount Requested</p>
+                  <p className="font-medium">
+                    KSH {openApp?.amountRequested ?? "—"}
+                  </p>
+                </div>
               </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+
+              <div className="mt-4">
+                <p className="text-sm text-slate-500">Notes</p>
+                <pre className="mt-1 bg-slate-50 p-2 rounded whitespace-pre-wrap text-sm">
+                  {openApp?.notes ?? "No notes provided"}
+                </pre>
+              </div>
+
+              <div className="flex justify-end gap-2 mt-6">
+                <button
+                  className="px-4 py-2 border rounded"
+                  onClick={() => setOpenApp(null)}
+                >
+                  Close
+                </button>
+
+                <button className="px-4 py-2 bg-blue-600 text-white rounded">
+                  Open Review
+                </button>
+              </div>
+            </div>
+          </Transition.Child>
+        </div>
+      </Transition>
     </div>
   );
 }
